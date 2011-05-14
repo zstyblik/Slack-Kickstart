@@ -15,45 +15,45 @@
 #########
 # MAIN	#
 #########
-if [[ $# -ne 1 ]]; then
+if [ $# -ne 1 ]; then
 	echo
 	echo "Usage: $0 Config-Files/HOSTNAME.cfg"
 	echo
 	exit 1
 fi
 
-if [[ (`whoami` != "root") ]]; then
+if [ (`whoami` != "root") ]; then
 	echo
 	echo "You must exec $0 as root"
 	echo
 	exit 1
 fi
 
-if [[ !(-f template102.gz) ]]; then
+if [ !(-f template102.gz) ]; then
 	echo
 	echo "Cannot find template image!"
 	echo
 	exit 1
 fi
 
-if [[ !(-f $1) ]]; then
+if [ !(-f $1) ]; then
 	echo
 	echo "Cannot find config file: '$1'"
 	echo
 	exit 1
 fi
 
-if [[ !(-d rootdisks) ]]; then
+if [ !(-d rootdisks) ]; then
 
 	mkdir rootdisks
 fi
 
-if [[ !(-d mount ) ]]; then
+if [ !(-d mount ) ]; then
 
 	mkdir mount
 fi
 
-if [[ !(`which openssl` ) ]]; then
+if [ !(`which openssl` ) ]; then
         echo
         echo "Cannot find openssl binary!"
         echo "Please install openssl package."
