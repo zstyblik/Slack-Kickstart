@@ -1,0 +1,22 @@
+#
+# Kernel repository list
+#
+
+http://slack-kickstart.sourceforge.net/kernel
+http://www.slackware.at/data/slackware-10.2/kernels/bare.i
+ftp://ftp.slackware.at/slackware-10.2/kernels/bare.i
+nfs:10.55.20.2:/slackware-10.2/kernels/bare.i
+cdrom:/
+
+
+
+
+
+
+
+
+
+
+
+
+

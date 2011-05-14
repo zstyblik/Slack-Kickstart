@@ -1,0 +1,64 @@
+			#############################
+			#### Slack-Kicstart 10.2 ####
+			#############################
+
+Author: 	Davide Zito <dave@slack-kickstart.org>
+Last revision:	24/09/2006
+Version: 	0.6b
+
+#################################################################
+#			WARNING!!!!				#
+#								#
+# THE AUTO INSTALLER CREATES PARTITIONS ON THE DESTINATION DISK	#
+# ERASING THE PREVIOUS CONTENTS: YOU'LL LOST ALL YOUR DATA ON	#
+# DESTINATION DISK, SO BE CAREFUL BEFORE USING THIS TOOL!!!!	#
+#################################################################	
+
+INFO:
+-----
+
+Slack-Kickstart 10.2 provides automatic installation of Slackware-10.2
+Linux distribution.
+
+REQUIREMENTS:
+-------------
+
+- A kernel with loopback device support (Slackware standard kernel is OK).
+- Tcl & Tk (Needed to run the configuration GUI TkGui.tcl).
+- syslinux (Needed to create Iso & PXE images).
+- cdrtools (as above).
+- openssl (Needed to encrypt the root password).
+
+QUICKSTART:
+-----------
+
+You need to download some kernels into kernels subdir.
+You can use original Slackware-10.2 kernels, or any
+custom kernel, but if you choose the 'custom' 
+way you need built-in support for ethernet card and
+system disks device.
+
+Kernel images can be stored in any directory layout:
+
+kernels-\
+	|
+	[dir] bare.i
+    	|	\
+	|	bzImage		
+	|
+	[dir] scsi.s 
+    	|	\
+	|	bzImage		
+	|
+	[dir] adaptec.s 
+    	|	\
+	|	bzImage		
+	|
+	[dir] custom
+	|	\
+	|	mykernel1 mykernel2 ...	
+	
+
+See the online tutorial at:
+
+ http://www.slack-kickstart.org/index.php?ART=documentation

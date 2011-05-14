@@ -1,0 +1,18 @@
+### CREDITS ###
+
+- Slack-Kicstart template image is based on Slackware boot disk.
+  Slackware is a registered trademark of Patrick Volkerding and 
+  Slackware Linux, Inc.
+
+- Combobox widget on TkGUI by Bryan Oakley  
+  Copyright (c) 1998-2002, Bryan Oakley
+  All Rights Reservered - oakley@bardo.clearlight.com
+
+- Creation of bootable CD's is made using ISOLINUX, Copyright (C) 1994-2001
+  H. Peter Anvin. Available at http://syslinux.zytor.com/.
+
+- Autoupdates: swaret is an updating tool for the Slackware distribution.  
+  http://swaret.sourceforge.net/index.php
+
+- Autoupdates: slapt-get is an APT like system for Slackware package management. 
+  by Jason  Woodward - Copyright (C) Jaos.org 2005

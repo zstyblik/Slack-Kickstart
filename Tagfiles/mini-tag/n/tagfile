@@ -1,0 +1,94 @@
+# This is a Slackware Installation Tagfile.
+#           
+# This one comes from the N (Network/UUCP/Mail/News) series.
+# It is used to automate software installation. 
+# There are two labels that you can use: ADD and SKP.
+#
+# If the PROMPT option is used during installation, this file will be checked
+# to determine the installation default. First, all the lines beginning with
+# <package_name>: 
+# will be extracted. Then, the last line in the extracted segment will be 
+# checked for the flags ADD, REC, SKP and SKP.
+#
+# If ADD is found, then a priority of [required] will be displayed, and the
+# package will be automatically installed. 
+#
+# If SKP is found, then a priority of [skip] will be displayed, and
+# the package will be automatically skipped.
+#
+# All other packages will be prompted for. There are two optional flags you
+# can use to change the package priority level shown when the user is 
+# prompted: REC and SKP. If REC is found, the priority shown will be
+# [recommended], while if SKP is found, the user sees priority [optional].
+#
+# If no flags are found for a given package, the user is shown priority
+# [unknown], and is prompted for whether the package should be installed.
+# 
+#
+apache: SKP
+autofs: SKP
+bind: ADD
+bitchx: SKP
+bootp: SKP
+curl: SKP
+dhcp: SKP
+dhcpcd: ADD
+dnsmasq: SKP
+elm: SKP
+epic4: SKP
+fetchmail: SKP
+getmail: REC
+gnupg: SKP
+htdig: SKP
+imapd: SKP
+inetd: ADD
+iproute2: SKP
+iptables: ADD
+iptraf: SKP
+irssi: SKP
+lftp: SKP
+links: SKP
+lynx: ADD
+metamail: ADD
+mod_ssl: SKP
+mutt: SKP
+nail: SKP
+nc: SKP
+ncftp: SKP
+netatalk: SKP
+netpipes: SKP
+netwatch: SKP
+newspost: SKP
+nfs-utils: ADD
+nmap: SKP
+nn: SKP
+ntp: ADD
+openssh: ADD
+openssl: SKP
+php: SKP
+pidentd: SKP
+pine: SKP
+popa3d: SKP
+portmap: SKP
+ppp: SKP
+procmail: SKP
+proftpd: SKP
+rdist: SKP
+rp-pppoe: SKP
+rsync: SKP
+samba: SKP
+sendmail-cf: SKP
+sendmail: SKP
+slrn: SKP
+stunnel: SKP
+tcpdump: ADD
+tcpip: ADD
+tin: SKP
+traceroute: ADD
+trn: SKP
+uucp: SKP
+wget: ADD
+whois: ADD
+wireless-tools: SKP
+yptools: SKP
+ytalk: SKP
