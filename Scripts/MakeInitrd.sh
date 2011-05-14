@@ -15,10 +15,6 @@
 #########
 # MAIN	#
 #########
-
-IFS='
-'
-
 if [[ $# -ne 1 ]]; then
 	echo
 	echo "Usage: $0 Config-Files/HOSTNAME.cfg"
