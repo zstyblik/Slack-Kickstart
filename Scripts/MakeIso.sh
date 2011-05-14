@@ -70,7 +70,7 @@ done
 # Get the kernel
 #
 
-if [ $# -lt 2  ]; then
+if [ $# -lt 2 ]; then
 	echo
 	echo "usage: ${0} initrd_image kernel [Slackware-10.2 CD]"
 	echo
@@ -84,12 +84,13 @@ if [ ! -e "${1}" ]; then
 	exit 1
 fi
 
-if [ ! $(file "${1}" | grep "gzip compressed data")  ]; then
-	echo
-	echo "Error: Not an initrd image '$1' !"
-	echo
-	exit 1
-fi
+file "${1}" | grep -q "gzip compressed data" || \
+	{
+		echo
+		echo "Error: Not an initrd image '$1' !"
+		echo
+		exit 1
+	}
 
 if [ ! -e "${2}" ]; then
 	echo
@@ -97,13 +98,14 @@ if [ ! -e "${2}" ]; then
 	echo
 	exit 1
 fi
-
-if [ ! $(file "${2}" | grep "x86 boot sector")  ];then
-	echo
-	echo "Error: Not a Slackware kernel '${2}' !"
-	echo
-	exit 1
-fi
+file "${2}" | awk "{ if (/Linux/ && /kernel/ && /x86/) print \$1; }" | \
+	grep -q -E -e '^.+$' || \
+	{
+		echo
+		echo "Error: Not a Slackware kernel '${2}' !"
+		echo
+		exit 1
+	}
 
 
 IMAGE="${1}"
