@@ -8,9 +8,6 @@
 # Converts tagfiles to taglist
 #
 
-IFS='
-'
-
 LISTNAME=`basename $1`
 
 echo "#" > Taglists/$LISTNAME
