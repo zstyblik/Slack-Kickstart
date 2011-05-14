@@ -8,27 +8,37 @@
 # Converts tagfiles to taglist
 #
 
-LISTNAME=`basename $1`
+help()
+{
+	printf "#\n# Converts Slackware tagfiles in taglist format:\n"
+	printf "#\n# Usage: %s Tagfiles/tag-file\n#\n" ${0}
+	printf "# Example: to convert mini-tag Tagfile\n"
+	printf "# %s Tagfiles/mini-tag \n#\n" ${0}
+	return 0
+}
 
-echo "#" > Taglists/$LISTNAME
+FILEIN=${1:-'None'}
 
 if [ $# -ne 1 ]; then
-   echo -e "#\n# Converts Slackware tagfiles in taglist format:"
-   echo -e "#\n# Usage: $0 Tagfiles/tag-file\n#"
-   echo -e "# Example: to convert mini-tag Tagfile\n#"
-   echo -e "# $0 Tagfiles/mini-tag \n#"
-   
-   exit 1
+	help
+	exit 1
 fi
 
+if [ "${FILEIN}" = "None" ] || [ ! -f "${FILEIN}" ]; then
+	printf "#\n# Tagfile either doesn't exist or is not set.\n"
+	help
+	exit 1
+fi
 
-for DISKSET in `ls $1/ | grep -v CVS`
-do
-   echo -e "#\n# Diskset $DISKSET\n#" >> Taglists/$LISTNAME
-   for PACKAGE in  `cat $1/$DISKSET/tagfile | grep -v "#"`
-   do
-   	echo -e "$DISKSET/$PACKAGE" >> Taglists/$LISTNAME
-   done 
+LISTNAME=$(basename "${FILEIN}")
+
+echo "#" > "Taglists/${LISTNAME}"
+
+for DISKSET in $(ls "${FILEIN}/" | grep -v -e 'CVS'); do
+	printf "#\n# Diskset %s\n#" "${DISKSET}" >> "./Taglists/${LISTNAME}"
+	for PACKAGE in $(cat "${FILEIN}/${DISKSET}/tagfile" | grep -v "#"); do
+		echo -e "${DISKSET}/${PACKAGE}" >> "./Taglists/${LISTNAME}"
+	done 
 done
 
-echo -e "\nTaglist $LISTNAME has been created in Taglists/$LISTNAME\n"
+echo -e "\nTaglist '${LISTNAME}' has been created in './Taglists/${LISTNAME}'\n"
