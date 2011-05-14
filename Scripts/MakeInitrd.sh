@@ -46,11 +46,11 @@ if [ "${CFGFILE}" = 'None' ] || [ ! -f "${CFGFILE}" ]; then
 	exit 1
 fi
 
-if [ ! -d './rootdisks') ]; then
+if [ ! -d './rootdisks' ]; then
 	mkdir './rootdisks'
 fi
 
-if [ ! -d './mount' ) ]; then
+if [ ! -d './mount' ]; then
 	mkdir './mount'
 fi
 
