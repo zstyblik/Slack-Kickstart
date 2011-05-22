@@ -39,9 +39,17 @@ if [ ! -f './template102.gz' ]; then
 	exit 1
 fi
 
+if [ ! $(which openssl) ]; then
+	echo
+	echo "Cannot find openssl binary!"
+	echo "Please install openssl package."
+	echo
+	exit 1
+fi
+
 if [ "${CFGFILE}" = 'None' ] || [ ! -f "${CFGFILE}" ]; then
 	echo
-	echo "Cannot find config file: '$1'"
+	echo "Cannot find config file: '${CFGFILE}'"
 	echo
 	exit 1
 fi
@@ -53,15 +61,6 @@ fi
 if [ ! -d './mount' ]; then
 	mkdir './mount'
 fi
-
-if [ ! $(which openssl) ]; then
-	echo
-	echo "Cannot find openssl binary!"
-	echo "Please install openssl package."
-	echo
-	exit 1
-fi
-
 
 clear
 
@@ -78,7 +77,7 @@ HOST=$(basename "${CFGFILE}" |sed -e 's/.cfg//')
 #
 
 KNAME=$(basename "${KERNEL}")
-ENCRIPTED=$(openssl passwd -1 "${PASSWD}")
+ENCRYPTED=$(openssl passwd -1 "${PASSWD}")
 INSTALL_TYPE=$(echo "${PACKAGE_SERVER}" | cut -d ":" -f 1)
 
 #########################
@@ -127,7 +126,7 @@ mount -o loop "${HOST}" mount > /dev/null 2>&1 && \
 # Creates etc/Kickstart.cfg on root image
 #------------------------------------------
 
-cat "Config-Files/${HOST}.cfg" | sed -e "s@${PASSWD}@\'${ENCRIPTED}\'@" \
+cat "Config-Files/${HOST}.cfg" | sed -e "s@${PASSWD}@\'${ENCRYPTED}\'@" \
 	> mount/etc/Kickstart.cfg
 
 #----------------------------------------------------------
@@ -140,7 +139,7 @@ cat "Config-Files/${HOST}.cfg" | sed -e "s@${PASSWD}@\'${ENCRIPTED}\'@" \
 
 printf "#\n# Taglist: %s\n#" $TAG >> mount/etc/Kickstart.cfg
 
-for PACKAGE in $(cat "./Taglists/${TAG}" | grep -v "#"); do
+for PACKAGE in $(cat "./Taglists/${TAG}" | grep -v -e "#"); do
 	echo "#@${PACKAGE}" >> mount/etc/Kickstart.cfg
 done
 
