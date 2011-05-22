@@ -1,0 +1,59 @@
+#!/bin/sh
+#
+# /usr/lib/setup/CreatePartitions
+#
+# Slackware 10.2 Kickstart installation.
+#
+# comments to: vonatar@slack-kickstart.org
+# http://www.slack-kickstart.org
+#
+# Last Revision: 19/09/2006 by vonatar
+#
+# includes common functions
+. /usr/lib/setup/include/functions.inc
+
+#########################
+#    HDD partitioning   #
+#########################
+#
+# Creates device nodes
+# TODO ~ mkdev is required
+#/usr/sbin/makedevs.sh > ${REDIR} 2>&1
+#
+# Clears MBR & Partition table
+#
+dd if=/dev/zero of=${BOOTDEV} bs=512 count=1 > ${REDIR} 2>&1
+#
+# Creates partitions
+#
+printf "Creating partitions on %s..... " "${BOOTDEV}"
+cat /tmp/SFDiskPartitionsList | \
+	sfdisk --no-reread --force ${BOOTDEV} -uM > ${REDIR} 2>&1
+#
+# Test Partitions
+#
+# TODO ~ this won't pass % set -e; -> stuff it into if $(cmd) ; then ???
+if ! $(sfdisk -V ${BOOTDEV} > ${REDIR} 2>&1) ; then
+	echo
+	echo "FATAL ERROR on partitions table - Aborting"
+	echo "HINT: Check tty4 for errors."
+	echo "HINT: Partitions exceeding ${BOOTDEV} size ?"
+	FireBugInfo
+	exit 1
+fi
+#
+# Makes the first partition bootable
+# -N number
+# Change only the single partition indicated. For example:
+#  % sfdisk /dev/hdb -N5
+#  ,,,*
+#  %
+#
+echo ",,,*" | sfdisk --force ${BOOTDEV} -N1 > ${REDIR} 2>&1
+#
+# Device creation: now we need to create
+# dev nodes for the new partitions
+#
+#/usr/sbin/makedevs.sh > ${REDIR} 2>&1
+echo "[OK]"
+echo

@@ -1,0 +1,113 @@
+#!/bin/sh
+#
+# /usr/lib/setup/Slaptget
+#
+# Slack-Kickstart 10.2
+#
+# comments to: vonatar@slack-kickstart.org
+# http://www.slack-kickstart.org
+#
+# Created on: 19/09/2005 by vonatar
+# Last Revision: 19/09/2005 by vonatar
+#
+# includes config file & install functions
+#
+. /usr/lib/setup/include/functions.inc
+
+if [ ! -d /mnt/etc/rc.d ]; then
+	mkdir -p /mnt/etc/rc.d
+fi
+if [ ! -d /mnt/var/log ]; then
+	mkdir -p /mnt/var/log
+fi
+
+###########################
+# Slackware updates setup #
+###########################
+cd /mnt/usr/Download
+#
+# Downloads and installs
+# slapt-get from:
+# http://software.jaos.org
+#
+#dialog --title "Packages updates by slapt-get" --infobox \
+#	"Downloading slapt-get from\n\n http://software.jaos.org " 10 50
+echo "Package updates from slapt-get"
+echo "Downloading slapt-get from\n\n http://software.jaos.org "
+
+if ! $(wget "${SLAPTGET}" 1 > ${REDIR} 2>&1) ; then
+	echo "ERROR downloading slapt-get - Skipping Autoupdates!" | \
+		tee /mnt/var/log/slapt-get.log
+	touch /tmp/Kickstart.END
+	exit 0
+fi
+SLAPTPKG=$(basename "${SLAPTGET}")
+/usr/lib/setup/installpkg --root /mnt "${SLAPTPKG}"
+#
+# If PKG Repository is NFS, is better to point
+# to HTTP or FTP backup PKG servers. 
+# [ http://www.slackware.at/data/slackware-10.1 ]
+#
+if [ "${PKG_SRC}" = "http" -o "${PKG_SRC}" = "ftp" ]; then
+	PSERV="SOURCE=${PACKAGE_SERVER}"
+else
+# TODO ~ unhardcode ?
+	PSERV="SOURCE=http://www.slackware.at/data/slackware-10.2"
+fi
+#
+# Adds repository to update sources in slapt-get
+# config file
+#
+#------------------------------------------------------------------------------
+cat << EOP > /mnt/etc/slapt-get/slapt-getrc
+#
+# See /usr/doc/slapt-get-0.9.9i/example.slapt-getrc
+# for example source entries and configuration hints.
+#
+# Modified for ${DISTRO}
+# 
+
+WORKINGDIR=/var/slapt-get
+EXCLUDE=kernel-.*,alsa-.*,lilo,.*-[0-9]dl$,devs,aaa_elflibs
+${PSERV}
+EOP
+#------------------------------------------------------------------------------
+cd -
+#
+# This script is executed in a chroot env on /mnt
+# and upgrades installed packages with slapt-get
+#
+#------------------------------------------------------------------------------
+cat << EOZ > /mnt/etc/rc.d/rc.upgrade
+#!/bin/bash
+#
+# PKG List update by slapt-get
+# 
+
+clear
+echo "####################################"
+echo "# Updating packages with slapt-get #"
+echo "####################################"
+echo
+
+echo "Updating PKG list: "
+/usr/sbin/slapt-get --update | tee /var/log/slapt-get.log
+
+#
+# PKG upgrade
+#
+
+echo
+echo "Upgrading packages:"
+/usr/sbin/slapt-get --upgrade -y | tee -a /var/log/slapt-get.log
+
+#
+# Exits from chroot after PKG update
+#
+
+exit
+EOZ
+#------------------------------------------------------------------------------
+
+chmod 750 /mnt/etc/rc.d/rc.upgrade
+chroot /mnt /etc/rc.d/rc.upgrade

@@ -1,0 +1,148 @@
+#!/bin/sh
+#
+# /usr/lib/setup/Swaret
+#
+# Slack-Kickstart 10.2
+#
+# comments to: vonatar@slack-kickstart.org
+# http://www.slack-kickstart.org
+#
+# Created on: 19/09/2005 by vonatar
+# Last Revision: 25/09/2005 by vonatar
+#
+# includes config file & install functions
+#
+. /usr/lib/setup/include/functions.inc
+###########################
+# Slackware updates setup #
+###########################
+if [ ! -d /mnt/usr/Download ]; then
+	mkdir /mnt/usr > /dev/null || true
+	mkdir /mnt/usr/Download
+fi
+if [ ! -d /mnt/etc/rc.d ]; then
+	mkdir /mnt/etc > /dev/null || true
+	mkdir /mnt/etc/rc.d
+fi
+if [ ! -d /var/log ]; then
+	mkdir /var > /dev/null || true
+	mkdir /var/log
+fi
+cd /mnt/usr/Download
+#
+# Downloads and installs
+# swaret for Slackware 10.2
+# from sourceforge.net
+#
+#dialog --title "Packages updates by swaret" --infobox \
+#	"Downloading swaret from sourceforge mirror " 10 50
+echo "Packages updated by swaret - downloading from SF.net"
+
+# TODO ~ unhardcode
+LINK='http://ovh.dl.sourceforge.net/sourceforge/swaret/swaret-1.6.2-noarch-1.tgz.tar'
+
+if ! $(wget "${LINK}") ; then
+	echo "ERROR downloading swaret - Skipping Autoupdates!" | tee /var/log/swaret 
+	touch /tmp/Kickstart.END
+	exit 0
+fi
+#
+# Renames swaret package and installs it!
+#
+mv swaret-1.6.2-noarch-1.tgz.tar swaret-1.6.2-noarch-1.tgz
+
+#/usr/lib/setup/installpkg -infobox --root /mnt swaret-1.6.2-noarch-1.tgz
+/usr/lib/setup/installpkg --root /mnt swaret-1.6.2-noarch-1.tgz
+#
+# If PKG Repository is NFS or CD-Rom , is better to point
+# to HTTP or FTP backup PKG servers. 
+#
+if [ "${PKG_SRC}" = "http" -o "${PKG_SRC}" = "ftp" ]; then
+	PSERV="ROOT=${PACKAGE_SERVER}"
+else
+	PSERV=""
+fi
+
+#
+# Moves swaret.conf.new -> swaret.conf.dist to
+# avoid Swaret's error message
+#
+# Creates swaret.conf
+#
+mv /mnt/etc/swaret.conf.new /mnt/etc/swaret.conf.dist
+#--------------------------------------------------------------------------------------------------
+cat << EOP > /mnt/etc/swaret.conf
+############################################################
+#
+# swaret.conf, Version: 1.6.2
+#
+#### /etc/swaret.conf - Created by Slack-Kickstart-10.2 ####
+#
+VERSION=10.2
+#
+${PSERV}
+ROOT=http://www.slackware.at/data/slackware-\$VERSION
+ROOT=http://sunsite.cnlab-switch.ch/ftp/mirror/slackware/slackware-\$VERSION
+ROOT=http://ftp.planetmirror.com/pub/slackware/slackware-\$VERSION
+ROOT=http://www.slackware.no/slackware/slackware-\$VERSION
+ROOT=ftp://ftp.slackware.at/slackware-\$VERSION
+ROOT=ftp://ftp.planetmirror.com/pub/slackware/slackware-\$VERSION
+ROOT=ftp://ftp.nluug.nl/pub/os/Linux/distr/slackware/slackware-\$VERSION
+ROOT=ftp://ftp.slackware.no/pub/linux/slackware/slackware-\$VERSION
+#
+DEP_ROOT=http://swaret.sourceforge.net
+RANDOMR=0
+USEPKGDESC=0
+EXCLUDE=aaa_ kernel alsa
+DEPENDENCY=0
+DSEARCHLIB=0
+DSEARCHM=0
+MD5CHECK=1
+GPGCHECK=0
+DESC=0
+CACHE_DIR=/var/swaret
+LOG=1
+LOG_FILE=/var/log/swaret
+WARNINGS=1
+INFORMATION=1
+NIC=${ETH}
+PROGRESS=1
+TIMEOUT=35
+RETRIES=5
+PASSIVE_FTP=1
+#
+### /etc/swaret.conf - SWARET EXAMPLE CONFIGURATION FILE ###
+EOP
+#--------------------------------------------------------------------------------------------------
+
+#
+# This script is executed in a chroot env on /mnt
+# and upgrades installed packages with slapt-get
+#
+#--------------------------------------------------------------------------------------------------
+cat << EOZ > /mnt/etc/rc.d/rc.upgrade
+#!/bin/bash
+#
+# PKG List updates by Swaret
+# 
+
+clear
+echo "#################################"
+echo "# Updating packages with Swaret #"
+echo "#################################"
+printf "\n\n"
+
+mount -t proc none /proc
+
+swaret --update && swaret --upgrade -a
+
+#
+# Exits from chroot after PKG update
+#
+
+exit
+EOZ
+#--------------------------------------------------------------------------------------------------
+
+chmod 750 /mnt/etc/rc.d/rc.upgrade
+chroot /mnt /etc/rc.d/rc.upgrade

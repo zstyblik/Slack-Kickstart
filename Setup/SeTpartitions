@@ -1,0 +1,109 @@
+#!/bin/sh
+#
+# SeTpartition user-friendly rewrite Fri Dec 15 13:17:40 CST 1995 pjv
+# Rewrite to support filesystem plugins <david@slackware.com>, 07-May-2001
+# Don't use plugins, make it work, pjv, 18-May-2001.
+#
+# Modified for Slack-Kickstart 10.2
+#
+# Last Revision: 19/09/2005 by vonatar
+#
+# Comments to: vonatar@slack-kickstart.org
+# http://sourceforge.net/projects/slack-kickstart/
+#
+# includes common functions
+. /usr/lib/setup/include/functions.inc
+. /usr/lib/setup/include/filesystem.inc
+#########################################################
+#							#
+#	FORMATTING PARTITIONS				#
+#							#
+#########################################################
+#
+# Checks if using smart_array or ataraid
+#
+Check_Smart_Array
+#
+# Getting the list of Linux partitions
+# and formatting them with the choosen 
+# filesystem.
+#
+echo "Formatting partitions on ${DEVICE}:"
+for FS in $(cat /tmp/FilesystemsList); do
+	# see if this partition has a filesystem associated
+	FS2=$(echo "${FS}" | cut -d " " -f 2)
+	case "$FS2" in
+		'xfs')
+			COMMAND="make_xfs"
+			;;
+		'jfs')
+			COMMAND="make_jfs"
+			;;
+		'reiserfs')
+			COMMAND="make_reiserfs"
+			;;
+		'ext3')
+			COMMAND="make_ext3"
+			INODES=4096
+			CHECK="n"
+			;;
+		'swap')
+			COMMAND="make_swap" 
+			INODES=""
+			CHECK=""
+			;;
+		*)
+			COMMAND="make_ext2"
+			INODES=4096
+			CHECK="n"
+	esac
+
+	PART_NUMBER=$(echo "${FS}" | cut -d " " -f 1)
+	PARTITION_DEVICE="${DEVICE}${PART_NUMBER}"
+
+	printf "${PARTITION_DEVICE} [${FS2}] ..... "
+	$COMMAND ${PARTITION_DEVICE} ${INODES} ${CHECK}
+	#
+	# Check if OK
+	#
+	if [ $? -ne 0 ]; then
+		printf "\nFATAL ERROR formatting %s - Aborting\n" "${PARTITION_DEVICE}"
+		echo "HINT: Check tty4 for errors during format."
+		FireBugInfo
+		exit 1
+	fi
+done # for FS
+#
+# Now, we MUST mount root partition on /mnt
+#
+if [ ! -d /mnt ]; then
+	mkdir /mnt
+fi
+mount "${ROOTPART}" /mnt
+#
+# Check if mount was successfull.
+#
+if [ $? -ne 0 ]; then
+	printf "\nFATAL ERROR mounting root partition %s - Aborting" "${ROOTPART}\n"
+	echo "HINT: Check tty4 for errors."
+	FireBugInfo
+	exit 1
+fi
+
+for MOUNT in $(cat /tmp/MountpointsList); do
+	MOUNTPOINT=$(echo "${MOUNT}" | cut -d " " -f 2)
+	MOUNTPARSED=$(echo "${MOUNT}" | cut -d " " -f 1)
+	MOUNT_DEVICE="${DEVICE}${MOUNTPARSED}"
+	
+	if [ "${MOUNT_DEVICE}" = ${ROOTPART} ]; then
+		continue
+	fi
+
+	if [ "${MOUNTPOINT}" = "swap" ]; then
+		# Activate swap partition(s)
+		/sbin/swapon "${MOUNT_DEVICE}" > "${REDIR}" 2>&1
+		continue
+	fi
+	mkdir -p "/mnt${MOUNTPOINT}"
+	mount "${MOUNT_DEVICE}" "/mnt${MOUNTPOINT}"
+done

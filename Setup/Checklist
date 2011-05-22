@@ -1,0 +1,196 @@
+#!/bin/sh
+#
+# /usr/lib/setup/Checklist
+#
+# Slackware 10.2 Kickstart installation.
+#
+# comments to: vonatar@slack-kickstart.org
+# http://www.slack-kickstart.org
+#
+# Created: 19/09/2005 by vonatar
+# Last Revision: 05/08/2006 by vonatar
+#
+
+if [ ! -e '/etc/Kickstart.cfg' ]; then
+	echo "File '/etc/Kickstart.cfg' not found."
+	echo "Exitting checklist."
+	checklist_failed
+	exit 1
+fi
+
+. /etc/Kickstart.cfg
+
+# Includes common functions
+. /usr/lib/setup/include/functions.inc
+. /usr/lib/setup/include/installer.inc
+
+clear
+
+echo
+echo "#########################"
+echo "# Pre-install Checklist #"
+echo "#########################"
+echo
+
+######################
+# Network card check #
+######################
+#
+# Checks if Ethernet is configured;
+# if true, we have a static kernel with
+# ethernet support built-in
+#
+# if false, we need to load kernel
+# modules hoping to find the right one.
+#
+if [ ${ETH} ] && ! $(ip link show dev "${ETH}" > /dev/null 2>&1) ; then
+#
+# No ethernet card support in Kernel.
+# 
+	rm -f /tmp/Modules.info
+	echo "Your kernel has no built-in support for ethernet card!"
+	echo "Probing for MCA, ISA, and PCI network cards: "
+# Note ~ don't we have an udev for this kind of stuff???
+	for CARD in 3c59x acenic de4x5 dgrs eepro100 e1000 tg3 epic100 hp100 ne2k-pci olympic \
+		pcnet32 rcpci 8139too 8139cp sktr tulip via-rhine yellowfin dl2k ns83820 \
+		depca ibmtr 3c501 3c503 3c505 3c507 3c509 3c515 ac3200 \
+		acenic at1700 cosa cs89x0 de4x5 de600 \
+		de620 e2100 eepro eexpress es3210 eth16i ewrk3 fmv18x forcedeth hostess_sv11 \
+		hp-plus hp lne390 ne3210 ni5010 ni52 ni65 sb1000 sealevel smc-ultra \
+		sis900 smc-ultra32 smc9194 wd virtio_net; do
+		modprobe "${CARD}" > /dev/null 2>&1
+		if $(ip link show dev "${ETH}" > /dev/null 2>&1 ) ; then
+			echo "Found: $CARD card."
+			echo "/sbin/modprobe $CARD" > /tmp/Modules.info
+			break
+		fi
+	done
+#
+# If /tmp/Modules.info does not
+# exist or is empty, we did not
+# found an ethernet module.
+#
+# The installation can proceed without
+# network support ONLY if PKG server
+# and Kernel repository are on CD-Rom
+#
+	if [ ! -s /tmp/Modules.info ]; then
+		if [ "${PKG_SRC}" = "cdrom" ]; then
+			touch /mnt/NONET
+			echo "No ethernet card found." 
+		else
+			touch "/tmp/CHECKLIST_FAILED"
+			echo
+			echo "FATAL ERROR on Ethernet card - Aborting"
+			echo "I'm sorry, i did  not found a kernel "
+			echo "module for your Ethernet card."
+			FireBugInfo
+			exit 1
+		fi # if PKG_SRC
+	fi # if ! -s /tmp/Modules
+fi # if ip link
+
+#######################
+# Sets up the network #
+#######################
+#
+# Brings up network only if
+# we have an usable ethernet card.
+#
+if [ ! -e /tmp/NONET ]; then
+	if [ ! -e /tmp/NETWORK_UP ]; then
+		/bin/sh /etc/rc.d/rc.inet1 start && touch /tmp/NETWORK_UP
+	fi # if ! -e /tmp/NET
+#
+# Ntpdate is executed only if network is UP
+#
+	if [ -e /tmp/NETWORK_UP -a "${NTPHOST}" != "none" ]; then
+		printf "Syncing clock with $NTPHOST ..... " 
+		if $(/usr/sbin/ntpdate "${NTPHOST}" > /dev/null 2>&1) ; then
+			echo "[OK]"
+			printf "Saving date on hardware clock ....." && \
+				/usr/sbin/hwclock --${HWCLOCK} --systohc > /dev/null 2>&1 && echo "[OK]" 
+		else 
+			echo "[FAILED]"
+		fi # if ntpdate
+	fi # if -e /tmp/NET
+fi # if ! -e /tmp/NET
+#############
+# HDD check #
+#############
+#
+# Checks if $DEVICE is supported
+# 
+DEV=$(basename "${BOOTDEV}")
+printf "Checking if '${DEVICE}' is supported ... "
+if ! $(cat /proc/partitions | grep -e "${DEV}" > /dev/null 2>&1) ; then
+	# fatal error
+	touch /tmp/CHECKLIST_FAILED
+	printf "[FAILED]\n\n\n"
+	echo "FATAL ERROR: cannot access '${DEVICE}' - Aborting"
+	echo "HINT: Does this kernel support '${DEVICE}' ?"
+	FireBugInfo
+	exit 1
+else
+	printf "[OK]\n\n"
+fi
+############################
+# Scans for a cdrom device #
+############################
+#
+# Needed to eject the cd-rom
+# before reboot.
+#
+if [ ! -e /tmp/CDROM ] && [ "${PKG_SRC}" = "cdrom" ]; then
+	Scan_CD
+fi
+
+########################
+# PACKAGE_SERVER check #
+########################
+printf "\nChecking package server ..... "
+#--------------------------
+# Package server - FTP/HTTP
+#--------------------------
+if [ "${PKG_SRC}" = "ftp" -o "${PKG_SRC}" = "http" ]; then
+	wget "${PACKAGE_SERVER}/CHECKSUMS.md5" -O /mnt/CHECKSUMS.md5 > /dev/null 2>&1
+	if [ ! -s /mnt/CHECKSUMS.md5 ]; then
+		touch /tmp/CHECKLIST_FAILED
+		printf "[FAILED]\n\n"
+		echo "FATAL ERROR: PKG server '${PACKAGE_SERVER}'"
+		echo "FATAL ERROR: is unreachable - Aborting"
+		echo "HINT: Check network configuration."
+		echo "HINT: Check if your PKG server is alive!"
+		FireBugInfo
+		exit 1
+	fi # if ! -s 
+	echo "[OK]"
+	rm /mnt/CHECKSUMS.md5
+fi # if PKG_SRC ftp || http
+#------------------------
+# Package server - CD-Rom
+#------------------------
+if [ "${PKG_SRC}" = "cdrom" ]; then
+	Check_CD CHECKSUMS.md5
+fi
+#------------------------
+# Package server - NFS
+#------------------------
+if [ "${PKG_SRC}" = "nfs" ]; then
+	NFS_Mount "${PACKAGE_SERVER}"
+	#
+	# Check CHECKSUMS.md5 on NFS share
+	#
+	if [ ! -s /var/log/mount/CHECKSUMS.md5 ]; then
+		touch "/tmp/CHECKLIST_FAILED"
+		printf " [FAILED]\n\n"
+		echo "FATAL ERROR: Cannot find ${DISTRO} root on NFS  - Aborting"
+		echo "HINT: Check PKG repository path in /etc/Kickstart.cfg"
+		echo "HINT: Path must point to ${DISTRO} root"
+		FireBugInfo
+		exit 1
+	fi
+	umount  /var/log/mount
+	echo "[OK]"
+fi # if PKG_SRC = nfs
+### END of /usr/lib/setup/Checklist

@@ -1,0 +1,54 @@
+#!/bin/sh
+#
+# /usr/lib/Raptor
+#
+# Slack-Kickstart 10.2
+#
+# comments to: vonatar@slack-kickstart.org
+# http://www.slack-kickstart.org
+#
+# Last Revision: 05/08/2006 by vonatar
+#
+#-------------------------------------
+# - Creates pkg download/mount directory
+# - Fires the install procedure
+#-------------------------------------
+#
+# includes config file & install functions
+#
+. /usr/lib/setup/include/functions.inc
+. /usr/lib/setup/include/installer.inc
+# 
+# Creates PKG download directory
+#
+mkdir -p /mnt/usr/Download/slackware
+#
+# Checks install type for packages and kernel.
+#
+####################
+# Packages install #
+####################
+case "${PKG_SRC}" in
+	'http'|'ftp')
+		HTTP_FTP_Install
+		;;
+	'nfs')
+		NFS_Mount "${PACKAGE_SERVER}"
+		NFS_CD_Install
+		;;
+	'cdrom')
+		CDROM=$(cat /tmp/CDROM)
+		/bin/mount -o ro -t iso9660 "${CDROM}" /var/log/mount > ${REDIR} 2>&1
+		NFS_CD_Install
+		;;
+	*)
+		echo "FATAL ERROR: Invalid PKG source - Aborting"
+		FireBugInfo
+		exit 1
+		;;
+esac
+##################
+# Kernel install #
+##################
+# TODO ~ install kernel from package instead
+#cp "/kernel/${KERN}" /mnt/boot

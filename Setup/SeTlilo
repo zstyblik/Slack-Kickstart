@@ -1,0 +1,96 @@
+#!/bin/sh
+#
+# /usr/lib/setup/SeTlilo
+#
+# Slack-Kickstart 10.2
+#
+# comments to: vonatar@slack-kickstart.org
+# http://www.slack-kickstart.org
+#
+# Last Revision: 05/08/2006 by vonatar
+#
+#
+#------------------------------------------
+# Creates lilo.conf
+# Installs lilo
+#------------------------------------------
+#
+# includes common functions
+. /usr/lib/setup/include/functions.inc
+#
+# Moving created fstab to destination disk
+#
+mv /tmp/fstab /mnt/etc/fstab
+touch /mnt/etc/mtab
+#
+# Checks if using smart_array or ataraid
+#
+Check_Smart_Array
+#
+# If kernel name is 'bzImage'
+# it's better to rename it as:
+#
+# vmlinuz-version
+#
+if [ ! -d /mnt/boot ]; then
+	mkdir /mnt/boot
+fi
+if [ "${KERN}" = "bzImage" ]; then 
+	KVERSION=$(uname -a | cut -d " " -f 3)
+	KNAME="vmlinuz-${KVERSION}"
+	mv "/mnt/boot/${KERN}" "/mnt/boot/${KNAME}"
+else
+	KNAME="${KERN}"
+fi
+
+#------------------------------------------
+# Creates lilo.conf
+#------------------------------------------
+# image = /boot/${KNAME}
+cat << EOF > /mnt/etc/lilo.conf
+# LILO configuration file
+# 
+#
+# Start LILO global section
+boot = ${BOOTDEV}
+lba32
+#compact        # faster, but won't work on all systems.
+prompt
+#serial = 0,9600n8
+
+timeout = 300
+default = linux
+# Normal VGA console
+vga = normal
+#ramdisk = 0     # paranoia setting
+# End LILO global section
+# Linux bootable partition config begins
+image = /boot/vmlinuz
+  root = ${ROOTPART}
+  label = linux
+  read-only # Non-UMSDOS filesystems should be mounted read-only for checking
+# Insert other images here
+
+# Linux bootable partition config ends
+EOF
+#-----------------------------------------
+#
+# Installs lilo
+#
+clear
+echo "###################"
+echo "# Installing LILO #"
+echo "###################"
+echo
+if ! $(/mnt/sbin/lilo -v -r /mnt > /tmp/lilo.out) ; then
+	echo
+	echo "FATAL ERROR installing lilo! - Aborting"
+	FireBugInfo
+# TODO ~ unblock
+#	exit 1
+else
+	echo
+	echo "Installed."
+	echo
+	sleep 1
+fi

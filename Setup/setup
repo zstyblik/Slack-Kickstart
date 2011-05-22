@@ -1,0 +1,136 @@
+#!/bin/sh
+#
+# Copyright 1993,1994,1999 Patrick Volkerding, Moorhead, Minnesota USA
+# Copyright 2001 Slackware Linux, Inc., Concord, CA
+# All rights reserved.
+#
+# Redistribution and use of this script, with or without modification, is 
+# permitted provided that the following conditions are met:
+#
+# 1. Redistributions of this script must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
+#  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF 
+#  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO
+#  EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
+#  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+#  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+#  OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
+#  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
+#  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+#  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# As always, bug reports, suggestions, etc: volkerdi@slackware.com
+#
+# Modified for
+# Slack-Kickstart 10.2
+#
+# comments to: vonatar@slack-kickstart.org
+# http://www.slack-kickstart.org
+#
+# Last Revision: 20/09/2006 by vonatar
+#
+# includes common functions
+. /usr/lib/setup/include/functions.inc
+#
+# - Sets env variables
+# - Sets PATH
+#
+REDIR=/dev/tty4
+TMP=/tmp
+#
+if [ ! -d "${TMP}" ]; then
+	mkdir -p "${TMP}"
+fi
+
+PATH="$PATH:/usr/lib/setup"
+export PATH
+
+clear
+
+echo
+echo "##########################"
+echo "# Starting installation! #"
+echo "##########################"
+echo
+#
+# Creates:
+#
+# - FSList
+# - MPList
+# - SFDiskPartList
+# - fstab
+#
+Extract_Info 2 > /tmp/MountpointsList
+Extract_Info 3 > /tmp/FilesystemsList
+Extract_Info 4 > /tmp/SFDiskPartitionsList
+#
+Check_Smart_Array
+#
+Create_Fstab
+#
+# The only way i've found to exit installer
+# if something goes wrong, is to run an
+# install script only if exit status of
+# previous is 0; could someone point me to
+# an alternative and more elegant way ?
+# 
+# - Creates partitions
+# - Formats filesystem & mounts partitions
+# - Downloads and installs packages
+# - Creates lilo.conf and installs lilo.
+# - Sets network parameters
+#
+
+CreatePartitions && SeTpartitions && Raptor && SeTlilo && SeTnetwork && SeTconfig
+
+#
+# If exit status is OK
+# runs the final tasks
+#
+if [ -e /tmp/Kickstart.END ]; then
+	# 
+	# Cleanup
+	#
+	rm -rf /mnt/usr/Download
+	rm -f /mnt/etc/mtab
+	rm -f /mnt/PkgList.txt
+	rm -f /mnt/CHECKSUMS.md5
+	#
+	# Run postinstall script
+	#
+	if [ -s /etc/postinstall.sh ]; then
+		cp /etc/postinstall.sh /mnt/postinstall.sh
+		chmod +x /mnt/postinstall.sh
+		chroot /mnt /postinstall.sh
+		rm /mnt/postinstall.sh
+	fi
+	#
+	# Installation ends!
+	#
+	echo -e \\a
+	echo "Installation complete."
+	echo 
+	#
+	# Ejects CD-Rom before reboot
+	#
+	if [ -s /tmp/CDROM ] && [ -x /bin/eject ]; then
+		/bin/eject `cat /tmp/CDROM`
+	fi
+	#
+	# If AUTOSTART=yes umounts all partitions
+	# and reboots the system 
+	#
+	if [ "$AUTOSTART" = "yes" ]; then
+		umount -a
+		echo "Rebooting system in 5 seconds!!"
+		sleep 5
+		reboot
+	else
+		echo
+		echo "You can reboot now"
+		echo
+	fi
+fi
+# end slackware setup script

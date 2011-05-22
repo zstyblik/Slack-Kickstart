@@ -1,0 +1,165 @@
+#!/bin/sh
+#
+# /usr/lib/setup/SeTconfig
+#
+# Slack-Kickstart 10.2
+#
+# comments to: vonatar@slack-kickstart.org
+# http://www.slack-kickstart.org
+#
+# Last Revision: 19/09/2005 by vonatar
+#
+#------------------------------------------
+# Sets root password
+# Sets timezone
+# Sets keymap
+# Sets HWClock
+# Secure mode (ssh only)
+# Rebootmail
+# Stores network modules info on rc.modules
+# Starts auto update procedure
+#------------------------------------------
+
+# includes config file.
+. /etc/Kickstart.cfg
+#
+# KEYMAP is stored in the form:
+# qwerty/it.map
+# we need only the 'x.map' part
+#
+KMAP=$(echo "${KEYMAP}" | cut -d "/" -f 2)
+
+######################
+# Sets root password #
+######################
+# TODO ~ already solved in mkinitrd.sh; replace
+cat /mnt/etc/shadow | sed -e "s@root::@root:${PASSWD}:@g" > /mnt/etc/shadow2
+mv /mnt/etc/shadow2 /mnt/etc/shadow
+chmod 600 /mnt/etc/shadow
+##################
+# Timezone Setup #
+##################
+ln -sf "/usr/share/zoneinfo/${TIMEZONE}" /mnt/etc/localtime
+################
+# Keymap Setup #
+################
+if [ ! -d /mnt/etc/rc.d ]; then
+	mkdir -p /mnt/etc/rc.d/
+fi
+printf "\n\n#\n# Loads ${KEYMAP} keymap\n#\n" >> /mnt/etc/rc.d/rc.local
+echo "/usr/bin/loadkeys \"${KMAP}\"" >> /mnt/etc/rc.d/rc.local
+#################
+# HWClock setup #
+#################
+#--------------------------------------------------------------------------------------------------
+cat << EOX > /mnt/etc/hardwareclock
+# /etc/hardwareclock
+#
+# Tells how the hardware clock time is stored.
+# You should run timeconfig to edit this file.
+
+${HWCLOCK}
+EOX
+#--------------------------------------------------------------------------------------------------
+
+##############################################
+# Secure mode: if true, only sshd is started #
+##############################################
+if [ "${SECURE}" = "yes" ]; then
+	SVCLIST="rc.bind\nrc.httpd\nrc.inetd\nrc.lprng\nrc.samba\nrc.cups\n\
+rc.portmap\nrc.yp\nrc.sendmail"
+	for SERVICE in ${SVCLIST}; do
+		if [ -x "/mnt/etc/rc.d/${SERVICE}" ]; then
+			chmod -x "/mnt/etc/rc.d/${SERVICE}"
+		fi
+	done
+fi
+########################
+# Send email on reboot #
+########################
+#
+# If $EMAIL is not null, the installer
+# creates /etc/rc.d/rc.rebootmail on
+# destination filesystem; this script,
+# invoked in /etc/rc.d/rc.local, takes
+# care to send an alert whenever the
+# system boots up.
+#
+if [ ! -z "${EMAIL}" ]; then
+	printf "#\n# Sends an email to '${EMAIL}' at \
+boot\n#\n/etc/rc.d/rc.rebootmail" >> /mnt/etc/rc.d/rc.local
+#---------------------------------------------------
+	cat << EOP > /mnt/etc/rc.d/rc.rebootmail
+#!/bin/sh
+#
+# /etc/rc.d/rc.rebootmail
+#
+# Creates the email: 
+#
+
+cat << EOF > /tmp/bootmail.txt
+From: root@\`hostname\`
+To: ${EMAIL}
+Subject: \`hostname\` is up and running
+
+... some interesting info !!! :)
+
+1) NETWORK:
+
+\`ifconfig\`
+
+2) FILESYSTEMS:
+
+\`mount\`
+
+\`df -h\`
+
+3) DMESG:
+
+\`dmesg\`
+
+Have a nice day!!
+
+:)
+EOF
+#
+# Sends mail
+#
+
+if [ -x /etc/rc.d/rc.sendmail ];then
+
+    cat /tmp/bootmail.txt | /usr/sbin/sendmail "${EMAIL}"
+fi
+EOP
+#---------------------------------------------------
+	chmod 750 /mnt/etc/rc.d/rc.rebootmail
+fi
+
+#################
+# Modules setup #
+#################
+#
+# Adds the network modules found during
+# the install to /etc/rc.d/rc.modules
+#
+if [ -e /tmp/Modules.info ]; then
+	cat /tmp/Modules.info >> /mnt/etc/rc.d/rc.modules
+fi
+###########################
+# Slackware updates setup #
+###########################
+if [ -e /tmp/NONET ]; then
+	echo "No network support: skipping Autoupdates."
+	touch /tmp/Kickstart.END
+	exit 0
+fi
+
+
+if [ "${AUTOUPDATE}" = "slapt-get" ]; then
+	/usr/lib/setup/SlaptGet
+fi
+if [ "${AUTOUPDATE}" = "swaret" ]; then
+	/usr/lib/setup/Swaret
+fi
+# TODO ~ slackpkg
+touch /tmp/Kickstart.END
