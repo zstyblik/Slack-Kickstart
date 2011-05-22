@@ -14,9 +14,10 @@
 # to create an install image.
 #
 
-WORKDIR=/usr
-BSDIR=$WORKDIR/Kickstart
-ISODIR=$WORKDIR/Kickstart/tmp
+WORKDIR='/tmp/'
+BSDIR="${WORKDIR}/Kickstart"
+ISODIR="${WORKDIR}/Kickstart/tmp"
+RDSIZE=32768
 
 if [ ! -f $(which mkisofs) ]; then
 	echo
@@ -72,58 +73,58 @@ done
 
 if [ $# -lt 2 ]; then
 	echo
-	echo "usage: ${0} initrd_image kernel [Slackware-10.2 CD]"
+	echo "usage: ${0} initrd_image kernel [Slackware CD]"
 	echo
 	exit 1
 fi
 
-if [ ! -e "${1}" ]; then
+INITRDIMG=${1:-''}
+
+if [ ! -e "${INITRDIMG}" ]; then
 	echo
-	echo "Error: Cannot find initrd image '${1}'"
+	echo "Error: Cannot find initrd image '${INITRDIMG}'"
 	echo
 	exit 1
 fi
 
-file "${1}" | grep -q "gzip compressed data" || \
+file "${INITRDIMG}" | grep -q -e "gzip compressed data" || \
 	{
 		echo
-		echo "Error: Not an initrd image '$1' !"
+		echo "Error: Not an initrd image '${INITRDIMG}' !"
 		echo
 		exit 1
 	}
-
-if [ ! -e "${2}" ]; then
+KERNEL=${2:-''}
+if [ ! -e "${KERNEL}" ]; then
 	echo
-	echo "Error: Cannot find kernel '${2}'"
+	echo "Error: Cannot find kernel '${KERNEL}'"
 	echo
 	exit 1
 fi
-file "${2}" | awk "{ if (/Linux/ && /kernel/ && /x86/) print \$1; }" | \
+file "${KERNEL}" | awk "{ if (/Linux/ && /kernel/ && /x86/) print \$1; }" | \
 	grep -q -E -e '^.+$' || \
 	{
 		echo
-		echo "Error: Not a Slackware kernel '${2}' !"
+		echo "Error: Not a Slackware kernel '${KERNEL}' !"
 		echo
 		exit 1
 	}
 
 
-IMAGE="${1}"
-HOST=$(basename "${1}" | sed -e "s#.gz##g")
-KERNEL="${2}"
+HOST=$(basename "${INITRDIMG}" | sed -e "s#.gz##g")
 #todo: get from kickslack
 CD_IMAGE="${HOST}.iso"
 
 mkdir -p "${ISODIR}/isolinux"
 mkdir -p "${ISODIR}/img"
 cp "${ISOLINUXBIN}" "${ISODIR}/isolinux"
-cp "${IMAGE}" "${ISODIR}/initrd.img"
+cp "${INITRDIMG}" "${ISODIR}/initrd.img"
 cat << EOP > ${ISODIR}/isolinux/isolinux.cfg
 default linux
 prompt 0
 label linux
   kernel /kernels/vmlinuz
-  append initrd=/initrd.img devfs=nomount load_ramdisk=1 prompt_ramdisk=0 ramdisk_size=16384 rw root=/dev/ram
+  append initrd=/initrd.img devfs=nomount load_ramdisk=1 prompt_ramdisk=0 ramdisk_size=${RDSIZE} rw root=/dev/ram0
 EOP
 
 cat << EOF > ${ISODIR}/isolinux/iso.sort
@@ -143,13 +144,13 @@ cp "${KERNEL}" "${ISODIR}/kernels/vmlinuz"
 #
 
 if [ $# -eq 3 ]; then
-	PACKAGE_SERVER=$(cat "Config-Files/${HOST}.cfg" | grep PACKAGE_SERVER | \
+	PACKAGE_SERVER=$(cat "Config-Files/${HOST}.cfg" | grep -e PACKAGE_SERVER | \
 		sed -e 's/PACKAGE_SERVER=//g')
 	PKG_REP=$(echo "${PACKAGE_SERVER}" | cut -d ":" -f 1)
 
 	if [ "${PKG_REP}" = "cdrom" ]; then
-		SLACKCD=$3
-		TAG=$(cat "Config-Files/${HOST}.cfg" | grep TAG | sed 's/TAG=//g')
+		SLACKCD=${3:-''}
+		TAG=$(cat "Config-Files/${HOST}.cfg" | grep -e 'TAG' | -e sed 's/TAG=//g')
 		if [ ! -e "${SLACKCD}/CHECKSUMS.md5" ]; then
 			echo
 			echo "Cannot find Slackware-10.2 CD on '${SLACKCD}' - Aborting"
@@ -162,7 +163,8 @@ if [ $# -eq 3 ]; then
 		mkdir "${ISODIR}/slackware"
 		cp "${SLACKCD}/CHECKSUMS.md5" "${ISODIR}"
 	
-		for PACKAGE in $(cat "Taglists/${TAG}" | grep -v "#" | cut -d ":" -f 1); do
+		for PACKAGE in $(cat "Taglists/${TAG}" | grep -v -e "#" | \
+			cut -d ":" -f 1); do
 
 			DISKSET=$(echo "${PACKAGE}" | cut -d "/" -f 1)
 			if [ ! -d "${ISODIR}/slackware/${DISKSET}" ]; then
@@ -171,12 +173,9 @@ if [ $# -eq 3 ]; then
 				printf "Copying packages for diskset [ %s ] " "${DISKSET}"
 			fi
 			printf "."
-			cp ${SLACKCD}/slackware/${PACKAGE}*.tgz \
+			cp ${SLACKCD}/slackware/${PACKAGE}*.t?z \
 				"${ISODIR}/slackware/${DISKSET}/"
-			chmod 750 ${ISODIR}/slackware/${PACKAGE}*.tgz
-			cp ${SLACKCD}/slackware/${PACKAGE}*.txz \
-				"${ISODIR}/slackware/${DISKSET}/"
-			chmod 750 ${ISODIR}/slackware/${PACKAGE}*.txz
+			chmod 750 ${ISODIR}/slackware/${PACKAGE}*.t?z
 		done
 	else
 		echo
