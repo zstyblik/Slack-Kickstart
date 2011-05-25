@@ -20,7 +20,7 @@ CFGFILE=${1:-'None'}
 
 if [ $# -ne 1 ]; then
 	echo
-	echo "Usage: $0 Config-Files/HOSTNAME.cfg"
+	echo "Usage: $0 config-files/HOSTNAME.cfg"
 	echo
 	exit 1
 fi
@@ -66,7 +66,7 @@ clear
 
 HOST=$(basename "${CFGFILE}" |sed -e 's/.cfg//')
 
-. "./Config-Files/${HOST}.cfg"
+. "./config-files/${HOST}.cfg"
 
 #
 # Info needed for: 
@@ -126,7 +126,7 @@ mount -o loop "${HOST}" mount > /dev/null 2>&1 && \
 # Creates etc/Kickstart.cfg on root image
 #------------------------------------------
 
-sed -e "s@${PASSWD}@\'${ENCRYPTED}\'@" "Config-Files/${HOST}.cfg" \
+sed -e "s@${PASSWD}@\'${ENCRYPTED}\'@" "config-files/${HOST}.cfg" \
 	> mount/etc/Kickstart.cfg
 
 #----------------------------------------------------------
