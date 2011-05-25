@@ -28,31 +28,56 @@ clean_usr()
 } # clean_usr
 
 # Note: automagic lib dependency
-# TODO: what if dir is not /lib; ->create it
+# TODO: what if dir is anything else but /lib?
 getlibs()
 {
 	BINARY=${1:-''}
 	if [ -z "${BINARY}" ]; then
 		return 1
 	fi
-	echo "${BINARY}" | grep -q -e 'linux-vdso' && return 0;
-	echo "${BINARY}" | grep -q -e 'linux-gate' && return 0;
-	echo "${BINARY}" | grep -q -e '^/' && \
-		{
-			LIBDEP=$(echo "${BINARY}" | cut -d ' ' -f 1);
-			cp -aprv "${LIBDEP}" "${INITRDMOUNT}/lib${LIBDIRSUFFIX}/"
-		}
-	echo "${LIBLINE}" | grep -q -e '=>' && \
-		{
-			LIBDEP=$(echo "${LIBLINE}" | awk '{ print $3 }')
-			if [ ! -z "${LIBDEP}" ]; then
-				cp -aprv "${LIBDEP}" "${INITRDMOUNT}/lib${LIBDIRSUFFIX}"
-			fi
-		}
+	if [ ! -e "${BINARY}" ]; then
+		return 1
+	fi
+	for LIBLINE in $(ldd "${BINARY}"); do
+		echo "${LIBLINE}" | grep -q -e 'linux-vdso' && continue;
+		echo "${LIBLINE}" | grep -q -e 'linux-gate' && continue;
+		echo "${LIBLINE}" | awk '{ print $1 }' | grep -q -e '^/' && \
+			{
+				LIBTOCOPY=$(echo "${LIBLINE}" | cut -d ' ' -f 1);
+				LIBDIR=$(dirname "${LIBTOCOPY}")
+				if [ -z "${LIBTOCOPY}" ]; then
+					echo "[FAIL] failed to automagically copy lib dep for '${BINARY}'"
+					continue
+				fi
+				if [ ! -d "${INITRDMOUNT}/${LIBDIR}" ]; then
+					mkdir -p "${INITRDMOUNT}/${LIBDIR}"
+				fi
+				cp -apr "${LIBTOCOPY}" "${INITRDMOUNT}/${LIBDIR}";
+				continue;
+			}
+		echo "${LIBLINE}" | grep -q -e '=>' && \
+			{
+				LIBREAL=$(echo "${LIBLINE}" | awk '{ print $3 }')
+				LIBDIR=$(dirname "${LIBREAL}")
+				LIBLINK=$(echo "${LIBLINE}" | awk '{ print $1 }')
+				if [ -z "${LIBREAL}" -o -z "${LIBLINK}" ]; then
+					echo "[FAIL] failed to to automagically copy lib dep for '${BINARY}'"
+					continue
+				fi
+				if [ ! -d "${INITRDMOUNT}/${LIBDIR}" ]; then
+					mkdir -p "${INITRDMOUNT}/${LIBDIR}"
+				fi
+				cp -apr "${LIBREAL}" "${INITRDMOUNT}/${LIBDIR}";
+				LIBREALNAME=$(basename "${LIBREAL}");
+				pushd "${INITRDMOUNT}/${LIBDIR}";
+				ln -s "${LIBLINK}" "${LIBREALNAME}";
+				popd
+				continue;
+			}
+	done
 	return 0
 }
-
-
+### MAIN ###
 # Housekeeping...
 if $(mount | grep -q -e "${INITRDMOUNT}") ; then
 	echo "Initrd dir '${INITRDMOUNT}' already mounted."
@@ -173,7 +198,7 @@ depmod -v -b ./ 2.6.37.6
 popd
 # UDev
 pushd "${INITRDMOUNT}"
-/sbin/explodepkg /mnt/floppy/slackware64/a/udev-165-x86_64-2.txz
+/sbin/explodepkg ${SLACKPATH}/slackware64/a/udev-165-x86_64-2.txz
 sh ./install/doinst.sh
 rm -rf './install'
 getlibs sbin/udevd
@@ -184,7 +209,7 @@ cp -avp ${TMPDIR}/rc.scripts/* etc/rc.d/
 cp ${TMPDIR}/udev-helpers/nethelper.sh lib/udev/nethelper.sh || exit 254
 clean_usr
 # etc
-/sbin/explodepkg /mnt/floppy/slackware64/a/etc-13.013-x86_64-1.txz
+/sbin/explodepkg ${SLACKPATH}/slackware64/a/etc-13.013-x86_64-1.txz
 sh ./install/doinst.sh
 rm -rf ./install/
 find ./tmp | xargs rm -rf
@@ -223,7 +248,7 @@ rm ./sbin/lsmod
 rm ./sbin/modinfo
 rm ./sbin/modprobe
 rm ./sbin/rmmod
-explodepkg /mnt/floppy/slackware64/a/module-init-tools-3.12-x86_64-2.txz
+explodepkg ${SLACKPATH}/slackware64/a/module-init-tools-3.12-x86_64-2.txz
 getlibs sbin/lsmod
 getlibs sbin/depmod
 getlibs sbin/insmod
@@ -252,7 +277,7 @@ popd
 # btrfs-progs-20110327-x86_64-1.txz
 # EXT utils
 pushd "${INITRDMOUNT}"
-explodepkg /mnt/floppy/slackware64/a/e2fsprogs-1.41.14-x86_64-1.txz
+explodepkg ${SLACKPATH}/slackware64/a/e2fsprogs-1.41.14-x86_64-1.txz
 sh ./install/doinst.sh
 rm -rf "./usr/lib${LIBDIRSUFFIX}/pkgconfig"
 rm -rf ./usr/include
@@ -264,7 +289,7 @@ popd
 rm -rf ${TMPDIR}/slack-jfsutils
 mkdir ${TMPDIR}/slack-jfsutils
 cd ${TMPDIR}/slack-jfsutils
-explodepkg /mnt/floppy/slackware64/a/jfsutils-1.1.15-x86_64-1.txz
+explodepkg ${SLACKPATH}/slackware64/a/jfsutils-1.1.15-x86_64-1.txz
 rm -rf ./usr/doc
 rm -rf "./usr/lib${LIBDIRSUFFIX}/pkgconfig"
 rm -rf ./usr/include
@@ -278,7 +303,7 @@ rm -rf ${TMPDIR}/slack-jfsutils
 rm -rf ${TMPDIR}/slack-jfsutils
 mkdir ${TMPDIR}/slack-jfsutils
 cd ${TMPDIR}/slack-jfsutils
-explodepkg /mnt/floppy/slackware64/a/reiserfsprogs-3.6.21-x86_64-1.txz
+explodepkg ${SLACKPATH}/slackware64/a/reiserfsprogs-3.6.21-x86_64-1.txz
 rm -rf ./usr/doc
 rm -rf "./usr/lib${LIBDIRSUFFIX}/pkgconfig"
 rm -rf ./usr/include
@@ -292,7 +317,7 @@ rm -rf ${TMPDIR}/slack-jfsutils
 rm -rf ${TMPDIR}/slack-jfsutils
 mkdir ${TMPDIR}/slack-jfsutils
 cd ${TMPDIR}/slack-jfsutils
-explodepkg /mnt/floppy/slackware64/a/xfsprogs-3.1.4-x86_64-1.txz
+explodepkg ${SLACKPATH}/slackware64/a/xfsprogs-3.1.4-x86_64-1.txz
 rm -rf ./usr/doc
 rm -rf "./usr/lib${LIBDIRSUFFIX}/pkgconfig"
 rm -rf ./usr/include
@@ -307,7 +332,7 @@ cd ${TMPDIR}
 rm -rf slack-util-linux
 mkdir slack-util-linux
 cd slack-util-linux
-explodepkg /mnt/floppy/slackware64/a/util-linux-2.19-x86_64-1.txz
+explodepkg ${SLACKPATH}/slackware64/a/util-linux-2.19-x86_64-1.txz
 cp ./sbin/sfdisk "${INITRDMOUNT}/sbin/"
 cp -apr ./lib64 "${INITRDMOUNT}/"
 cp -r ./install "${INITRDMOUNT}/"
@@ -318,31 +343,31 @@ popd
 
 pushd "${INITRDMOUNT}"
 # NFS utils
-explodepkg /mnt/floppy/slackware64/n/nfs-utils-1.2.3-x86_64-3.txz
+explodepkg ${SLACKPATH}/slackware64/n/nfs-utils-1.2.3-x86_64-3.txz
 sh ./install/doinst.sh
 rm -rf ./install
 clean_usr
 # Portmap/RPC
-explodepkg /mnt/floppy/slackware64/n/portmap-6.0-x86_64-1.txz
+explodepkg ${SLACKPATH}/slackware64/n/portmap-6.0-x86_64-1.txz
 sh ./install/doinst.sh
 rm -rf ./install
 clean_usr
 # dialog
-#explodepkg /mnt/floppy/slackware64/a/dialog-1.1_20100428-x86_64-2.txz
+#explodepkg ${SLACKPATH}/slackware64/a/dialog-1.1_20100428-x86_64-2.txz
 #rm -rf ./install
 #clean_usr
 # pkgtools
-#explodepkg /mnt/floppy/slackware64/a/pkgtools-13.37-noarch-9.tgz
+#explodepkg ${SLACKPATH}/slackware64/a/pkgtools-13.37-noarch-9.tgz
 #rm -rf ./install
 #clean_usr
 # xz
-explodepkg /mnt/floppy/slackware64/a/xz-5.0.2-x86_64-1.tgz
+explodepkg ${SLACKPATH}/slackware64/a/xz-5.0.2-x86_64-1.tgz
 rm -rf ./usr/include/lzma
 sh ./install/doinst.sh
 rm -rf ./install
 clean_usr
 # terminfo
-explodepkg /mnt/floppy/slackware64/a/aaa_terminfo-5.8-x86_64-1.txz
+explodepkg ${SLACKPATH}/slackware64/a/aaa_terminfo-5.8-x86_64-1.txz
 rm -rf ./install
 popd
 cp ${TMPDIR}/slack-coreutils/bin/paste "${INITRDMOUNT}/bin/paste"
