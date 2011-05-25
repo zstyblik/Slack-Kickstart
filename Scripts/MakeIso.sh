@@ -144,13 +144,13 @@ cp "${KERNEL}" "${ISODIR}/kernels/vmlinuz"
 #
 
 if [ $# -eq 3 ]; then
-	PACKAGE_SERVER=$(grep -e 'PACKAGE_SERVER' "Config-Files/${HOST}.cfg" | \
+	PACKAGE_SERVER=$(grep -e 'PACKAGE_SERVER' "./config-files/${HOST}.cfg" | \
 		sed -e 's/PACKAGE_SERVER=//g')
 	PKG_REP=$(echo "${PACKAGE_SERVER}" | cut -d ":" -f 1)
 
 	if [ "${PKG_REP}" = "cdrom" ]; then
 		SLACKCD=${3:-''}
-		TAG=$(grep -e 'TAG' "Config-Files/${HOST}.cfg" | -e sed 's/TAG=//g')
+		TAG=$(grep -e 'TAG' "./config-files/${HOST}.cfg" | -e sed 's/TAG=//g')
 		if [ ! -e "${SLACKCD}/CHECKSUMS.md5" ]; then
 			echo
 			echo "Cannot find Slackware-10.2 CD on '${SLACKCD}' - Aborting"
