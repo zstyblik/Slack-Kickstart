@@ -463,7 +463,7 @@ combobox .configcmd.cbconfigfile \
 	-textvariable CONFIGFILE \
 	-background lightblue
 
-LoadComboCfg .configcmd.cbconfigfile Config-Files
+LoadComboCfg .configcmd.cbconfigfile config-files
 
 button .configcmd.bloadconfig -width 19 -text {Load Config File} \
 	-command { LoadConfigFile $CONFIGFILE}
