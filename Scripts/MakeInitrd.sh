@@ -32,7 +32,7 @@ if [ $(whoami) != "root" ]; then
 	exit 1
 fi
 
-if [ ! -f './template102.gz' ]; then
+if [ ! -f './Scripts/template102.gz' ]; then
 	echo
 	echo "Cannot find template image!"
 	echo
@@ -91,7 +91,7 @@ echo "#########################"
 echo
 printf "Cloning template image    "
 
-cp template102.gz "${HOST}.gz" \
+cp ./Scripts/template102.gz "${HOST}.gz" \
  && printf "\t[ OK ]\n"
 
 # Unpacking root image
@@ -126,7 +126,7 @@ mount -o loop "${HOST}" mount > /dev/null 2>&1 && \
 # Creates etc/Kickstart.cfg on root image
 #------------------------------------------
 
-cat "Config-Files/${HOST}.cfg" | sed -e "s@${PASSWD}@\'${ENCRYPTED}\'@" \
+sed -e "s@${PASSWD}@\'${ENCRYPTED}\'@" "Config-Files/${HOST}.cfg" \
 	> mount/etc/Kickstart.cfg
 
 #----------------------------------------------------------
@@ -139,7 +139,7 @@ cat "Config-Files/${HOST}.cfg" | sed -e "s@${PASSWD}@\'${ENCRYPTED}\'@" \
 
 printf "#\n# Taglist: %s\n#" $TAG >> mount/etc/Kickstart.cfg
 
-for PACKAGE in $(cat "./Taglists/${TAG}" | grep -v -e "#"); do
+for PACKAGE in $(grep -v -e "#" "./taglists/${TAG}"); do
 	echo "#@${PACKAGE}" >> mount/etc/Kickstart.cfg
 done
 
@@ -248,8 +248,8 @@ EOF
 # Changes ownership to
 # info file
 #
-
-chown ${USER}:users "rootdisks/Install.${HOST}.txt"
+GRP=$(id -ng)
+chown ${USER}:${GROUP} "rootdisks/Install.${HOST}.txt"
 
 fi
 
@@ -258,4 +258,4 @@ fi
 # initrd image
 #
 
-chown ${USER}:users "rootdisks/${HOST}.gz"
+chown ${USER}:${GROUP} "rootdisks/${HOST}.gz"
