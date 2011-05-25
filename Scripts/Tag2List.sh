@@ -36,7 +36,7 @@ echo "#" > "taglists/${LISTNAME}"
 
 for DISKSET in $(ls "${FILEIN}/" | grep -v -e 'CVS'); do
 	printf "#\n# Diskset %s\n#" "${DISKSET}" >> "./taglists/${LISTNAME}"
-	for PACKAGE in $(cat "${FILEIN}/${DISKSET}/tagfile" | grep -v "#"); do
+	for PACKAGE in $(grep -v -e '^#' "${FILEIN}/${DISKSET}/tagfile"); do
 		echo -e "${DISKSET}/${PACKAGE}" >> "./taglists/${LISTNAME}"
 	done 
 done
