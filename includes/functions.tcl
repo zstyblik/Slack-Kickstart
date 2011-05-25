@@ -78,7 +78,7 @@ proc SaveConfig {} {
 ############################	
 # Opens fd for config file #	
 ############################
-	set conffd [open "Config-Files/$HOSTNAME.cfg" w]
+	set conffd [open "./config-files/$HOSTNAME.cfg" w]
 
 	puts $conffd "$HEADER"
 
@@ -160,12 +160,12 @@ proc SaveConfig {} {
 # Checks user id
 #
 	if {$USER != "root" } {
-		set MESG "\n\nsu -c \"./Scripts/MakeInitrd.sh Config-Files/$HOSTNAME.cfg\"\n\n\n\n"
+		set MESG "\n\nsu -c \"./Scripts/MakeInitrd.sh config-files/$HOSTNAME.cfg\"\n\n\n\n"
 	} else {
-		set MESG "\n\n./Scripts/MakeInitrd.sh Config-Files/$HOSTNAME.cfg\n\n"
+		set MESG "\n\n./Scripts/MakeInitrd.sh config-files/$HOSTNAME.cfg\n\n"
 	}
 	.conftest.result insert end "Config file has been created in\n\n\
-Config-Files/$HOSTNAME.cfg\n\nNow you can create root image with:$MESG\
+config-files/$HOSTNAME.cfg\n\nNow you can create root image with:$MESG\
 Click on 'Close' to return to main window.\nClick on 'Quit' to quit TkGui."
 	puts "\nYou can create root image with:\n$MESG"
 }
@@ -379,7 +379,7 @@ proc LoadConfigFile {FILENAME} {
 #
 	ClearPartList ALL
 
-	set xfd [open "Config-Files/$CONFIGFILE" r]
+	set xfd [open "config-files/$CONFIGFILE" r]
 
 	while {[gets $xfd line] > -1} {
 		if { [ regexp {^#|^$} $line ] != 1 } {
