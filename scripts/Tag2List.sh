@@ -11,9 +11,9 @@
 help()
 {
 	printf "#\n# Converts Slackware tagfiles in taglist format:\n"
-	printf "#\n# Usage: %s Tagfiles/tag-file\n#\n" ${0}
+	printf "#\n# Usage: %s tagfiles/tag-file\n#\n" ${0}
 	printf "# Example: to convert mini-tag Tagfile\n"
-	printf "# %s Tagfiles/mini-tag \n#\n" ${0}
+	printf "# %s tagfiles/mini-tag \n#\n" ${0}
 	return 0
 }
 
