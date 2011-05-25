@@ -163,7 +163,7 @@ if [ $# -eq 3 ]; then
 		mkdir "${ISODIR}/slackware"
 		cp "${SLACKCD}/CHECKSUMS.md5" "${ISODIR}"
 	
-		for PACKAGE in $(cat "Taglists/${TAG}" | grep -v -e "#" | \
+		for PACKAGE in $(cat "./Taglists/${TAG}" | grep -v -e "#" | \
 			cut -d ":" -f 1); do
 
 			DISKSET=$(echo "${PACKAGE}" | cut -d "/" -f 1)
