@@ -32,13 +32,13 @@ fi
 
 LISTNAME=$(basename "${FILEIN}")
 
-echo "#" > "Taglists/${LISTNAME}"
+echo "#" > "taglists/${LISTNAME}"
 
 for DISKSET in $(ls "${FILEIN}/" | grep -v -e 'CVS'); do
-	printf "#\n# Diskset %s\n#" "${DISKSET}" >> "./Taglists/${LISTNAME}"
+	printf "#\n# Diskset %s\n#" "${DISKSET}" >> "./taglists/${LISTNAME}"
 	for PACKAGE in $(cat "${FILEIN}/${DISKSET}/tagfile" | grep -v "#"); do
-		echo -e "${DISKSET}/${PACKAGE}" >> "./Taglists/${LISTNAME}"
+		echo -e "${DISKSET}/${PACKAGE}" >> "./taglists/${LISTNAME}"
 	done 
 done
 
-echo -e "\nTaglist '${LISTNAME}' has been created in './Taglists/${LISTNAME}'\n"
+echo -e "\nTaglist '${LISTNAME}' has been created in './taglists/${LISTNAME}'\n"
