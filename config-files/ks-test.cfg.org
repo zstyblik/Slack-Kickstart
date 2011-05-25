@@ -1,0 +1,37 @@
+#
+#
+# Slack-Kickstart Slackware-10.2 config file
+# Created by TkGUI.tcl 
+# On Sat May 14 20:14:10 CEST 2011
+# By stybla@shodan
+#
+
+DISTRO=slackware64-13.37
+HOSTNAME=ks-test
+ETH=eth0
+PACKAGE_SERVER=http://ftp.sh.cvut.cz/storage/1/slackware/slackware64-13.37/
+TAG=mini-tag
+PASSWD=test1234
+KERNEL=kernels/huge.s/bzImage
+AUTOUPDATE=none
+SECURE=yes
+DHCP=yes
+AUTOSTART=no
+SLAPTGET=http://software.jaos.org/slackpacks/10.2/slapt-get-0.9.11a-i386-1.tgz
+NTPHOST=time.nist.gov
+
+#
+# Partition scheme.
+#
+
+DISK="DEVICE[/dev/sda]=[/],[ext3],[,900,83];"
+
+#
+# Timezone, Keymap & HWClock
+#
+
+KEYMAP=qwerty/us.map
+HWCLOCK=utc
+TIMEZONE=Europe/Prague
+
+## End of Kickstart.cfg ##
