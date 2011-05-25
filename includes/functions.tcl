@@ -160,9 +160,9 @@ proc SaveConfig {} {
 # Checks user id
 #
 	if {$USER != "root" } {
-		set MESG "\n\nsu -c \"./Scripts/MakeInitrd.sh config-files/$HOSTNAME.cfg\"\n\n\n\n"
+		set MESG "\n\nsu -c \"./scripts/MakeInitrd.sh config-files/$HOSTNAME.cfg\"\n\n\n\n"
 	} else {
-		set MESG "\n\n./Scripts/MakeInitrd.sh config-files/$HOSTNAME.cfg\n\n"
+		set MESG "\n\n./scripts/MakeInitrd.sh config-files/$HOSTNAME.cfg\n\n"
 	}
 	.conftest.result insert end "Config file has been created in\n\n\
 config-files/$HOSTNAME.cfg\n\nNow you can create root image with:$MESG\

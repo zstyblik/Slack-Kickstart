@@ -32,7 +32,7 @@ if [ $(whoami) != "root" ]; then
 	exit 1
 fi
 
-if [ ! -f './Scripts/template102.gz' ]; then
+if [ ! -f './scripts/template102.gz' ]; then
 	echo
 	echo "Cannot find template image!"
 	echo
@@ -91,7 +91,7 @@ echo "#########################"
 echo
 printf "Cloning template image    "
 
-cp ./Scripts/template102.gz "${HOST}.gz" \
+cp ./templates/template102.gz "${HOST}.gz" \
  && printf "\t[ OK ]\n"
 
 # Unpacking root image
@@ -189,7 +189,7 @@ if [ "${INSTALL_TYPE}" = "cdrom"  ]; then
 # [ Expecting Slackware-10.2 CD-Rom in /mnt/cdrom ]
 #
 
-./Scripts/MakeIso.sh rootdisks/${HOST}.gz ${KERNEL} /mnt/cdrom
+./scripts/MakeIso.sh rootdisks/${HOST}.gz ${KERNEL} /mnt/cdrom
 
 EOP
 
@@ -222,7 +222,7 @@ scp ${KERNEL} rootdisks/${HOST}.gz root@your_old_server:/boot
 # Create a Boot CD with:
 #
 
-./Scripts/MakeIso.sh rootdisks/${HOST}.gz ${KERNEL}
+./scripts/MakeIso.sh rootdisks/${HOST}.gz ${KERNEL}
 
 ------------------- PXE INFO ----------------------------
 #
