@@ -229,7 +229,7 @@ combobox .right.cbtaglist \
 	-textvariable TAG \
 	-background lightblue
 
-LoadComboCfg .right.cbtaglist Taglists
+LoadComboCfg .right.cbtaglist taglists
 set TAG "mini-tag"
 
 label .right.lsecure -text {Secure: }
