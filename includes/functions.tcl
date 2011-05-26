@@ -82,7 +82,8 @@ proc SaveConfig {} {
 
 	puts $conffd "$HEADER"
 
-	foreach VALUE { DISTRO HOSTNAME ETH PACKAGE_SERVER TAG PASSWD KERNEL AUTOUPDATE SECURE DHCP AUTOSTART } {
+	foreach VALUE { DISTRO HOSTNAME ETH PACKAGE_SERVER TAG PASSWD KERNEL \
+		AUTOUPDATE SECURE DHCP AUTOSTART } {
 		puts $conffd "$VALUE=[set $VALUE]"
 	}
 
@@ -110,7 +111,8 @@ proc SaveConfig {} {
 # Converting partitions to 
 # Kickstart.cfg format:
 #
-# DISK="DEVICE[/dev/hda]=[/boot],[ext2],[,50,83];[swap],[swap],[,128,82];[extended],[none],[,0,5];[empty],[none],[,0,0];[/],[ext2],[,0,83];"
+# DISK="DEVICE[/dev/hda]=[/boot],[ext2],[,50,83];[swap],[swap],[,128,82];\
+# 	[extended],[none],[,0,5];[empty],[none],[,0,0];[/],[ext2],[,0,83];"
 #
 
 #
@@ -140,7 +142,8 @@ proc SaveConfig {} {
 #
 # Appends the double quotes at the end of line.
 #
-# DISK="DEVICE[/dev/hda]=[/boot],[ext2],[,50,83];[swap],[swap],[,128,82];[extended],[none],[,0,5];[empty],[none],[,0,0];[/],[ext2],[,0,83];" <---
+# DISK="DEVICE[/dev/hda]=[/boot],[ext2],[,50,83];[swap],[swap],[,128,82];\
+#		[extended],[none],[,0,5];[empty],[none],[,0,0];[/],[ext2],[,0,83];" <---
 #
 	puts $conffd "\""
 
@@ -256,7 +259,8 @@ proc Parser {} {
 
 		if { $PART_MOUNT == "/" } { set ROOT_PART $PART_MOUNT }
 
-		.down.lista insert end [lindex $DEVICE$partition_number=\[$PART_MOUNT\],\[$PART_FS\],\[,$PART_SIZE,$PART_TYPE\] ]
+		.down.lista insert end [lindex $DEVICE$partition_number=\[$PART_MOUNT\], \
+			\[$PART_FS\],\[,$PART_SIZE,$PART_TYPE\] ]
 		incr partition_number
 	}
 #
@@ -272,7 +276,8 @@ proc Parser {} {
 		if { $PART_MOUNT == "/" } { 
 			set ROOT_PART $PART_MOUNT 
 		}
-		.down.lista insert $INDEX [lindex $DEV=\[$PART_MOUNT\],\[$PART_FS\],\[,$PART_SIZE,$PART_TYPE\] ]
+		.down.lista insert $INDEX [lindex $DEV=\[$PART_MOUNT\],\[$PART_FS\], \
+			\[,$PART_SIZE,$PART_TYPE\] ]
 		set EDITING False
 		.down.bpart-active configure -text { Add Partition }
 		.down.bdelete-part configure -state normal
@@ -333,7 +338,8 @@ proc Edit {} {
 
 	regsub -all {\[|\]|\{|\}|\[,} $partition_data "" partition_data
 
-	scan [ split $partition_data , ] "%s %s %s %s" PART_MOUNT PART_FS PART_SIZE PART_TYPE
+	scan [ split $partition_data , ] "%s %s %s %s" PART_MOUNT PART_FS \
+		PART_SIZE PART_TYPE
 
 }
 
@@ -533,8 +539,10 @@ proc TestConfig {} {
 	wm resizable .conftest 1 1
 	wm title .conftest  "- $DISTRO Config test for $HOSTNAME.$DOMAIN "
 
-	text .conftest.result -width 193 -height 19 -background black -foreground green -font fixed
-	button .conftest.bsaveconfig -width 20 -text {Save Config File} -state disabled -command SaveConfig
+	text .conftest.result -width 193 -height 19 -background black \
+		-foreground green -font fixed
+	button .conftest.bsaveconfig -width 20 -text {Save Config File} \
+		-state disabled -command SaveConfig
 	button .conftest.bexit -width 20 -text {Close} -command { destroy .conftest }
 	button .conftest.bquit -width 20 -text {Quit} -state disabled -command { exit }
 
@@ -669,7 +677,8 @@ proc EditCombo {COMBO FILE} {
 	wm title .editcombo  "- $DISTRO Repository Editor"
 
 	text .editcombo.content -width 193 -height 19 -background white -font fixed
-	button .editcombo.bsave -width 20 -text {Update } -command "SaveRepository $COMBO $FILE"
+	button .editcombo.bsave -width 20 -text {Update } \
+		-command "SaveRepository $COMBO $FILE"
 	button .editcombo.bexit -width 20 -text {Cancel} -command { destroy .editcombo }
 
 	place .editcombo.content -x 0 -y 0
