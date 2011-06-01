@@ -1,0 +1,55 @@
+#!/bin/sh
+# Start/stop/restart the system logging daemons.
+#
+# Written for Slackware Linux by Patrick J. Volkerding <volkerdi@slackware.com>.
+
+syslogd_start() {
+	if [ -x /sbin/syslogd -a -x /sbin/klogd ]; then
+		echo -n "Starting sysklogd daemons:  "
+		echo -n "/sbin/syslogd "
+		/sbin/syslogd
+		# prevent syslogd/klogd race condition on SMP kernels
+		if $(ps acx | grep -q udevd) ; then
+			while [ ! -e /dev/log ] ; do
+				sleep 0
+			done
+		else
+			sleep 1
+		fi
+		echo "/sbin/klogd -c 3"
+		# '-c 3' = display level 'error' or higher messages on console
+		# '-x' = turn off broken EIP translation
+		/sbin/klogd -c 3
+	fi
+	return 0
+}
+
+syslogd_stop() {
+	killall syslogd 2> /dev/null
+	killall klogd 2> /dev/null
+	return 0
+}
+
+syslogd_restart() {
+	syslogd_stop
+	sleep 1
+	syslogd_start
+	return 0
+}
+
+PARAM=${1:-'none'}
+
+case "${PARAM}" in
+	'start')
+		syslogd_start
+		;;
+	'stop')
+		syslogd_stop
+		;;
+	'restart')
+		syslogd_restart
+		;;
+	*)
+		echo "usage ${0} start|stop|restart"
+		;;
+esac

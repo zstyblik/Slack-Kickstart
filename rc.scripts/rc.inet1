@@ -1,0 +1,98 @@
+#!/bin/sh
+IFACEMAX=5
+
+ifdown()
+{
+	IFACE=${1:-''}
+	if [ -z "${IFACE}" ]; then
+		return 1
+	fi
+	if $(/bin/ip link show | /bin/grep -q -e "${IFACE}: ") ; then
+		if [ -e "/var/run/udhcpc.${IFACE}.pid" -o -r \
+			"/var/run/udhcpc.${IFACE}.pid" ]; then
+			kill $(cat "/var/run/udhcpc.${IFACE}.pid")
+			/bin/ip link set down dev "${IFACE}"
+		fi
+	fi
+	# If the interface is now down, exit with a status of 0:
+	if $(/bin/ip link show | /bin/grep -q -e "${IFACE}: " | \
+		/bin/grep -q -e "${IFACE}") ; then
+		return 0
+	fi
+	return 1
+} # ifdown
+
+ifup()
+{
+	IFACE=${1:-''}
+	if [ -z "${IFACE}" ]; then
+		return 1
+	fi
+	if ! $(/bin/ip link show | /bin/grep -q -e "${IFACE}: ") ; then
+		return 1
+	fi
+	if [ ! testwrite ]; then
+		return 1
+	fi
+	/bin/ip link set up dev "${IFACE}"
+	/bin/ip address flush dev "${IFACE}"
+	# TODO:
+	# source shell file w/ IP, NETMASK, BRD, DHCP=yes; 
+	# fname: /etc/rc.d/rc.inet1.${IFACE}.conf
+	# or /etc/networks/$IFACE{.conf}
+	if [ -e "/var/run/udhcpc.${IFACE}.pid" ]; then
+		kill $(cat "/var/run/udhcpc.${IFACE}.pid") >/dev/null
+		rm -f "/var/run/udhcpc.${IFACE}.pid"
+	fi
+	/sbin/udhcpc -i "${IFACE}" -p "/var/run/udhcpc.${IFACE}.pid" \
+		-s /etc/udhcpc/default.script -R -b
+	return 0
+} # ifup
+
+testwrite()
+{
+	RC=1
+	if $(touch /var/run/checkrw 2>/dev/null) ; then
+		rm -rf /var/run/checkrw 
+		RC=0
+	fi
+	return $RC
+}
+
+### MAIN ###
+COMMAND=${1:-''}
+
+if [ -z "${COMMAND}" ]; then
+	echo "usage ${0} interface [start|stop|<IFACE>_start|<IFACE>_down]"
+	exit 2
+fi
+
+case $COMMAND in
+	'start')
+		IFACECOUNT=0
+		while [ $IFACECOUNT -le $IFACEMAX ]; do
+			ifup "eth${IFACECOUNT}"
+			IFACECOUNT=$(($IFACECOUNT+1))
+		done
+		;;
+	'stop')
+		IFACECOUNT=0
+		while [ $IFACECOUNT -le $IFACEMAX ]; do
+			ifdown "eth${IFACECOUNT}"
+			IFACECOUNT=$(($IFACECOUNT+1))
+		done
+		;;
+	*_start)
+		INTERFACE=$(echo "${COMMAND}" | /usr/bin/cut -d '_' -f 1)
+		ifup "${INTERFACE}"
+		;;
+	*_stop)
+		INTERFACE=$(echo "${COMMAND}" | /usr/bin/cut -d '_' -f 1)
+		ifdown "${INTERFACE}"
+		;;
+	*)
+		echo "usage $0 interface start|stop"
+		exit 1
+		;;
+esac
+exit 0

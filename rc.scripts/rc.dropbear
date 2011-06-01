@@ -1,0 +1,62 @@
+#!/bin/sh
+PIDFILE='/var/run/dropbear.pid'
+RSAKEY='/etc/dropbear/dropbear_rsa_host_key'
+DSSKEY='/etc/dropbear/dropbear_dss_host_key'
+BITS=4096
+
+drop_gen_key()
+{
+	KEYTYPE=${1:-''}
+	FILE=${2:-''}
+	BITS=${3:-2048}
+	if [ -z "${KEYTYPE}" ] || [ -z "${FILE}" ] || [ -e "${FILE}" ]; then
+		return 1
+	fi
+	/usr/bin/dropbearkey -t "${KEYTYPE}" -f "${FILE}" -s ${BITS}
+	return 0
+}
+
+COMMAND=${1:-''}
+
+if [ -z "${COMMAND}" ]; then
+	echo "Usage: $0 start|stop"
+	exit 1
+fi
+
+case "${COMMAND}" in
+	'start')
+		if [ -e "${PIDFILE}" ]; then
+			echo "Dropbear PID file '${PIDFILE}' found. Already running?"
+			exit 1
+		fi
+		if [ ! -d '/etc/dropbear/' ]; then
+			mkdir '/etc/dropbear'
+		fi
+		if [ ! -e "${RSAKEY}" ]; then
+			drop_gen_key rsa "${RSAKEY}" ${BITS}
+		fi
+		if [ ! -e "${DSSKEY}" ]; then
+			drop_gen_key dss "${DSSKEY}" 1024
+		fi
+		echo "Starting Dropbear SSH server"
+		/usr/sbin/dropbear -P "${PIDFILE}" -I 60
+		;;
+	'stop')
+		if [ -e "${PIDFILE}" ]; then
+			PID=$(cat "${PIDFILE}")
+		fi
+		PIDPS=$(ps aux | grep dropbear | awk '{ print $2 }')
+		if [ $PID -ne $PIDPS ]; then
+			echo "Unwilling to stop Dropbear SSH due to PID file and PID % ps; mismatch."
+			exit 1
+		fi
+		echo "Killing Dropbear SSH server"
+		kill ${PID}
+		rm -f "${PIDFILE}"
+		;;
+	*)
+		echo "Usage: $0 start|stop"
+		exit 1
+	;;
+esac
+exit 0

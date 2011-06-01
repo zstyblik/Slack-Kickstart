@@ -1,0 +1,41 @@
+#!/bin/ash
+#
+# Starts with preinstall checklist.
+#
+
+KICKSTARTCFG='/etc/Kickstart.cfg'
+
+/usr/lib/setup/Checklist | tee /etc/motd
+
+###############################
+# Starts auto install process #
+###############################
+
+if [ ! -e "${KICKSTARTCFG}" ]; then
+	echo "File '${KICKSTARTCFG}' not found."
+	exit 0
+fi 
+
+if [ -e /tmp/CHECKLIST_FAILED ]; then
+	echo "Pre-install check has failed. I will not continue."
+	exit 0
+fi
+
+. "${KICKSTARTCFG}"
+
+AUTOSTART=${AUTOSTART:-'no'}
+
+if [ "${AUTOSTART}" = "yes" ]; then
+	sleep 1
+	/usr/lib/setup/setup
+else
+	echo
+	echo "Pre-install checklist OK!"
+	echo "Ready to go!"
+	echo
+	echo "Type 'setup' start installation."
+	echo
+fi
+
+
+# All done.
