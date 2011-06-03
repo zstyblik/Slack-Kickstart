@@ -1,0 +1,12 @@
+::sysinit:/etc/rc.d/rc.S
+::sysinit:/etc/rc.d/rc.M
+#
+ttyS0::askfirst:/bin/ash --login
+tty1::askfirst:/bin/ash --login
+tty2:askfirst:/bin/ash --login
+tty3::askfirst:/bin/ash --login
+#
+::ctrlaltdel:/sbin/reboot
+#
+::shutdown:/sbin/swapoff -a >/dev/null 2>&1 
+::shutdown:/bin/umount -a -r >/dev/null 2>&1
