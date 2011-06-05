@@ -12,6 +12,10 @@
 
 REDIR=/dev/tty4
 
+if [ ! -d /var/log/mount ]; then
+	mkdir -p /var/log/mount
+fi
+
 #######################
 # Create install list #
 #######################

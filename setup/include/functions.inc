@@ -35,6 +35,10 @@ PARTITIONS=$(echo "${DISK}" | cut -d '=' -f 2 | sed -e 's/,0,/,,/g')
 PKG_SRC=$(echo "${PACKAGE_SERVER}" | cut -d ":" -f 1)
 KERN=$(basename "${KERNEL}")
 
+if [ ! -d /var/log/mount ]; then
+	mkdir -p /var/log/mount
+fi
+
 #----------------------------- FUNCTIONS ------------------------------------------#
 FireBugInfo() {
 	echo
