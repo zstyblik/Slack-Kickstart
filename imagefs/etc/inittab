@@ -3,7 +3,7 @@
 #
 ttyS0::askfirst:/bin/ash --login
 tty1::askfirst:/bin/ash --login
-tty2:askfirst:/bin/ash --login
+tty2::askfirst:/bin/ash --login
 tty3::askfirst:/bin/ash --login
 #
 ::ctrlaltdel:/sbin/reboot
