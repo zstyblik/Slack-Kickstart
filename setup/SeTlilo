@@ -82,12 +82,11 @@ echo "###################"
 echo "# Installing LILO #"
 echo "###################"
 echo
-if ! $(/mnt/sbin/lilo -v -r /mnt > /tmp/lilo.out) ; then
+if ! $(chroot /mnt/ /sbin/lilo -v) ; then
 	echo
 	echo "FATAL ERROR installing lilo! - Aborting"
 	FireBugInfo
-# TODO ~ unblock
-#	exit 1
+	exit 1
 else
 	echo
 	echo "Installed."
