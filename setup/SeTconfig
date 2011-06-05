@@ -32,9 +32,9 @@ KMAP=$(echo "${KEYMAP}" | cut -d "/" -f 2)
 ######################
 # Sets root password #
 ######################
-# TODO ~ already solved in mkinitrd.sh; replace
-cat /mnt/etc/shadow | sed -e "s@root::@root:${PASSWD}:@g" > /mnt/etc/shadow2
-mv /mnt/etc/shadow2 /mnt/etc/shadow
+echo "[INFO] Setting root's password"
+sed -e "s@root::@root:${PASSWD}:@g" /mnt/etc/shadow > /mnt/etc/shadow2
+cp /mnt/etc/shadow2 /mnt/etc/shadow
 chmod 600 /mnt/etc/shadow
 ##################
 # Timezone Setup #
