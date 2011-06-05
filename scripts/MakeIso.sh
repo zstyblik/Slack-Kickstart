@@ -17,7 +17,7 @@
 WORKDIR='/tmp/'
 BSDIR="${WORKDIR}/Kickstart"
 ISODIR="${WORKDIR}/Kickstart/tmp"
-RDSIZE=32768
+RDSIZE=65536
 
 if [ ! -f $(which mkisofs) ]; then
 	echo
@@ -153,7 +153,7 @@ if [ $# -eq 3 ]; then
 		TAG=$(grep -e 'TAG' "./config-files/${HOST}.cfg" | -e sed 's/TAG=//g')
 		if [ ! -e "${SLACKCD}/CHECKSUMS.md5" ]; then
 			echo
-			echo "Cannot find Slackware-10.2 CD on '${SLACKCD}' - Aborting"
+			echo "Cannot find Slackware CD on '${SLACKCD}' - Aborting"
 			echo
 			exit 1
 		fi
