@@ -82,7 +82,7 @@ echo "###################"
 echo "# Installing LILO #"
 echo "###################"
 echo
-if ! $(chroot /mnt/ /sbin/lilo -v) ; then
+if ! $(chroot /mnt /sbin/lilo -v 1>/dev/null) ; then
 	echo
 	echo "FATAL ERROR installing lilo! - Aborting"
 	FireBugInfo
