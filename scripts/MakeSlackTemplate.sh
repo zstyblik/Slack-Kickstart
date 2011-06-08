@@ -542,14 +542,6 @@ explodepkg "${PORTMAPPKG}" 1>/dev/null
 sh ./install/doinst.sh
 rm -rf ./install
 clean_usr
-#### dialog
-#explodepkg ${SLACKPATH}/slackware64/a/dialog-1.1_20100428-x86_64-2.txz
-#rm -rf ./install
-#clean_usr
-# pkgtools
-#explodepkg ${SLACKPATH}/slackware64/a/pkgtools-13.37-noarch-9.tgz
-#rm -rf ./install
-#clean_usr
 #### xz
 XZPKG=$(parse_package 'xz-')
 explodepkg "${XZPKG}" 1>/dev/null
