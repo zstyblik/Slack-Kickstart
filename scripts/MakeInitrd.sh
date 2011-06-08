@@ -4,41 +4,67 @@
 # MakeInitrd.sh #
 #################
 #
-# Slack-Kickstart 10.2
+# Slack-Kickstart
 #
 # Last Revision: 24/07/2006 vonatar
 #
 # comments to: vonatar@slack-kickstart.org
 # http://www.slack-kickstart.org
 #
+set -e
+set -u
 
+show_help()
+{
+	echo
+	echo "Usage: ${0} <config-file> <bzImage> <template>"
+#	echo "Example: ${0} \
+#		config-files/sample.cfg \
+#		kernels/huge.s/bzImage \
+#		templates/tmpl-slackware-10.2.gz"
+	echo
+	return 0
+} # show_help
 #########
 # MAIN	#
 #########
-
-CFGFILE=${1:-'None'}
-
-if [ $# -ne 1 ]; then
+if [ $# -ne 3 ]; then
+	show_help
+	exit 1
+fi
+#
+CFGFILE=${1:-''}
+KERNEL=${2:-''}
+TMPLFILE=${3:-''}
+if [ -z "${CFGFILE}" ] || [ -z "${TMPLFILE}" ] || [ -z "${KERNEL}" ]; then
+	show_help
+	exit 1
+fi
+if [ ! -f "${CFGFILE}" ]; then
 	echo
-	echo "Usage: $0 config-files/HOSTNAME.cfg"
+	echo "Cannot find config file: '${CFGFILE}'!"
 	echo
 	exit 1
 fi
-
+if [ ! -f "${TMPLFILE}" ]; then
+	echo
+	echo "Cannot find template image '${TMPLFILE}'!"
+	show_help
+	exit 1
+fi
+if [ ! -f "${KERNEL}" ]; then
+	echo
+	echo "Cannot find bzImage '${KERNEL}'!"
+	show_help
+	exit 1
+fi
+# Tool check
 if [ $(whoami) != "root" ]; then
 	echo
 	echo "You must exec ${0} as root"
 	echo
 	exit 1
 fi
-
-if [ ! -f './scripts/template102.gz' ]; then
-	echo
-	echo "Cannot find template image!"
-	echo
-	exit 1
-fi
-
 if [ ! $(which openssl) ]; then
 	echo
 	echo "Cannot find openssl binary!"
@@ -46,28 +72,23 @@ if [ ! $(which openssl) ]; then
 	echo
 	exit 1
 fi
-
-if [ "${CFGFILE}" = 'None' ] || [ ! -f "${CFGFILE}" ]; then
-	echo
-	echo "Cannot find config file: '${CFGFILE}'"
-	echo
-	exit 1
-fi
-
+# Directories check
 if [ ! -d './rootdisks' ]; then
 	mkdir './rootdisks'
 fi
-
 if [ ! -d './mount' ]; then
 	mkdir './mount'
 fi
 
 clear
 
-HOST=$(basename "${CFGFILE}" |sed -e 's/.cfg//')
-
+HOST=$(basename "${CFGFILE}" '.cfg')
+if [ ! -f "./config-files/${HOST}.cfg" ]; then
+	echo "Cannot find config file: './config-files/${HOST}.cfg'."
+	echo
+	exit 1
+fi
 . "./config-files/${HOST}.cfg"
-
 #
 # Info needed for: 
 #
@@ -75,60 +96,49 @@ HOST=$(basename "${CFGFILE}" |sed -e 's/.cfg//')
 # - root password md5 hash
 # - Install info
 #
-
 KNAME=$(basename "${KERNEL}")
 ENCRYPTED=$(openssl passwd -1 "${PASSWD}")
-INSTALL_TYPE=$(echo "${PACKAGE_SERVER}" | cut -d ":" -f 1)
-
+INSTALL_TYPE=$(echo "${PACKAGE_SERVER}" | awk -F':' '{ print $1 }')
 #########################
 # Copy from template	#
 # and mount in loopback	#
 #########################
-
 echo "#########################"
 echo "# Creating initrd image #"
 echo "#########################"
 echo
-printf "Cloning template image    "
+printf "Cloning template image..."
 
-cp ./templates/template102.gz "${HOST}.gz" \
+cp "${TMPLFILE}" "${HOST}.gz" \
  && printf "\t[ OK ]\n"
 
 # Unpacking root image
-
-printf "Unpacking initrd image     "
+printf "Unpacking initrd image..."
 
 gunzip "${HOST}.gz" \
  && printf "\t[ OK ]\n"
 
 sleep 2
-
 # Mounting root image in loopback on mount directory
-
-printf "Mounting initrd image       "
-mount -o loop "${HOST}" mount > /dev/null 2>&1 && \
-	{
-    printf "\t[ OK ]\n"
-	} || { \
-		rm "${HOST}"
-		printf "\t[FAILED]\n"
-		echo
-		echo "Error mounting initrd image - Aborting!"
-		echo
-		exit 1
-	}
-
+printf "Mounting initrd image..."
+if $(mount -o loop "${HOST}" mount > /dev/null 2>&1) ; then
+	printf "\t[ OK ]\n"
+else
+	rm "${HOST}"
+	printf "\t[FAILED]\n"
+	echo
+	echo "Error mounting initrd image - Aborting!"
+	echo
+	exit 1
+fi
 #################
 # Kickstart.cfg #
 #################
-
 #------------------------------------------
 # Creates etc/Kickstart.cfg on root image
 #------------------------------------------
-
 sed -e "s@${PASSWD}@\'${ENCRYPTED}\'@" "config-files/${HOST}.cfg" \
 	> mount/etc/Kickstart.cfg
-
 #----------------------------------------------------------
 # appends Taglist to Kickstart.cfg 
 #
@@ -136,49 +146,47 @@ sed -e "s@${PASSWD}@\'${ENCRYPTED}\'@" "config-files/${HOST}.cfg" \
 # with '#@' to avoid problems when including Kickstart.cfg
 # on top of scripts.
 #----------------------------------------------------------
+TAG=${TAG:-''}
 
-printf "#\n# Taglist: %s\n#" $TAG >> mount/etc/Kickstart.cfg
-
-for PACKAGE in $(grep -v -e "#" "./taglists/${TAG}"); do
-	echo "#@${PACKAGE}" >> mount/etc/Kickstart.cfg
-done
-
-printf "# END of Taglist: %s" $TAG >> mount/etc/Kickstart.cfg
-
+printf "Getting TAG list..."
+if [ -z "${TAG}" ] || [ ! -e "./taglists/${TAG}" ]; then
+	printf "\t\t[ FAIL ]\n"
+	printf "TAG list empty or does not exist.\n"
+else
+	printf "#\n# Taglist: %s\n#" "${TAG}" >> mount/etc/Kickstart.cfg
+	for PACKAGE in $(grep -v -e "#" "./taglists/${TAG}"); do
+		echo "#@${PACKAGE}" >> mount/etc/Kickstart.cfg
+	done
+	printf "# END of Taglist: %s" $TAG >> mount/etc/Kickstart.cfg
+	printf "\t\t[ OK ]\n"
+fi
 #--------------------------------------
 # Timezone setting
 #--------------------------------------
-
 cp "/usr/share/zoneinfo/${TIMEZONE}" mount/etc/localtime
-
 ##########
 # Kernel #
 ##########
-
 cp "${KERNEL}" mount/kernel/
-
 #------------------------------------------
 # Creates the root image
 #------------------------------------------
-
-printf "Umounting initrd image       "
+printf "Umounting initrd image..."
 
 umount mount \
   && printf "\t[ OK ]\n"
 
-printf "Compressing initrd image     "
+printf "Compressing initrd image..."
 gzip "${HOST}" \
- && printf "\t[ OK ]\n"
-
+	&& printf "\t[ OK ]\n"
 #
 # Now we move the root image to
 # rootdisks directory
 #
-
 mv "${HOST}.gz" rootdisks
 
 echo
-echo "Root image for ${HOST} has been created!"
+echo "Root image for '${HOST}' has been created!"
 echo 
 
 if [ "${INSTALL_TYPE}" = "cdrom"  ]; then
@@ -196,7 +204,7 @@ EOP
 	else
 		echo "See 'rootdisks/Install.${HOST}.txt' for install info."
 		echo
-		cat << EOF > rootdisks/Install.${HOST}.txt
+		cat << EOF > ./rootdisks/Install.${HOST}.txt
 
 ------------- LILO INSTALL  -----------------------
 #
@@ -243,19 +251,15 @@ scp ${KERNEL} rootdisks/${HOST}.gz root@your_pxe_server:/tftpboot
 -------------------------------------------------------------
 
 EOF
-
 #
 # Changes ownership to
 # info file
 #
-GRP=$(id -ng)
-chown ${USER}:${GROUP} "rootdisks/Install.${HOST}.txt"
-
-fi
-
+	GROUP=$(id -ng)
+	chown ${USER}:${GROUP} "./rootdisks/Install.${HOST}.txt"
+fi # if INSTALL_TYPE cdrom
 #
 # Changes ownership to
 # initrd image
 #
-
-chown ${USER}:${GROUP} "rootdisks/${HOST}.gz"
+chown ${USER}:${GROUP} "./rootdisks/${HOST}.gz"
