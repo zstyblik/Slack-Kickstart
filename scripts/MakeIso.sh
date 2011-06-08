@@ -5,20 +5,37 @@
 #
 # Last Revision: 25/05/2006 vonatar
 #
-
-#
 # Work Dir
 # we need to set a working directory
 # for iso image creation; WORKDIR
-# must be lanrge enough if you need
+# must be large enough if you need
 # to create an install image.
 #
-
 WORKDIR='/tmp/'
 BSDIR="${WORKDIR}/Kickstart"
 ISODIR="${WORKDIR}/Kickstart/tmp"
 RDSIZE=65536
 
+if [ ! -d "${WORKDIR}/Kickstart/tmp" ]; then
+	printf "Creating workdir '${WORKDIR}'..."
+	if $(mkdir -p "${WORKDIR}/Kickstart/tmp" > /dev/null 2>&1) ; then
+		printf "\t[ OK ]\n"
+	else
+		printf "\t[ FAIL ]\n"
+		MYSELF=$(whoami)
+		echo
+		echo "Error creating work directory '${BSDIR}' !"  
+		echo "Create '${BSDIR}' with root, and change  "
+		echo "permissions to 'Kickstart' subdirectory: "
+		echo
+		echo " chown ${MYSELF}:users '${BSDIR}'"
+		echo
+		exit 1
+	fi
+fi
+######################################
+# Utilities ~ Find utils that we need
+######################################
 if [ ! -f $(which mkisofs) ]; then
 	echo
 	echo "Fatal error: cannot find 'mkisofs'"
@@ -27,59 +44,34 @@ if [ ! -f $(which mkisofs) ]; then
 	echo
 	exit 1
 fi
-
-if [ ! -d "${WORKDIR}/Kickstart/tmp" ]; then
-	mkdir -p "${WORKDIR}/Kickstart/tmp" > /dev/null 2>&1 || \
-		{
-			MYSELF=$(whoami)
-			echo
-			echo "Error creating work directory '${BSDIR}' !"  
-			echo "create '${BSDIR}' with root, and change  "
-			echo "permissions to 'Kickstart' subdirectory: "
-			echo
-			echo " chown ${MYSELF}:users '${BSDIR}'"
-			echo
-			exit 1
-		}
-fi
-
-#
-# FUNCTIONS
-#
-#
-# Find utils that we need
-#
 MKISOFS=$(which mkisofs)
 if [ ! -x "${MKISOFS}" ]; then
 	echo "You need to have mkisofs in your path."
 	exit 1
 fi
 
-ISOLINUXBIN="/usr/share/syslinux/isolinux.bin"
+ISOLINUXBIN=${ISOLINUXBIN:-"/usr/share/syslinux/isolinux.bin"}
 if [ ! -e "${ISOLINUXBIN}" ]; then
 	#try to find it...
 	ISOLINUXBIN=$(locate isolinux.bin | head -n 1)
 fi
-
 while [ ! -e "${ISOLINUXBIN}" ]; do
-	# TODO: ask user.
 	echo "Required file '${ISOLINUXBIN}' couldn't be found."
+	echo "If it's not located in '/usr/share/syslinux/' then "
+	echo "export path to isolinux.bin in variable 'ISOLINUXBIN'."
 	exit 1
 done
-
 #
 # Get the kernel
 #
-
 if [ $# -lt 2 ]; then
 	echo
-	echo "usage: ${0} initrd_image kernel [Slackware CD]"
+	echo "usage: ${0} <initrd_image> <kernel> [Slackware_CD]"
 	echo
 	exit 1
 fi
 
 INITRDIMG=${1:-''}
-
 if [ ! -e "${INITRDIMG}" ]; then
 	echo
 	echo "Error: Cannot find initrd image '${INITRDIMG}'"
@@ -87,13 +79,15 @@ if [ ! -e "${INITRDIMG}" ]; then
 	exit 1
 fi
 
-file "${INITRDIMG}" | grep -q -e "gzip compressed data" || \
-	{
-		echo
-		echo "Error: Not an initrd image '${INITRDIMG}' !"
-		echo
-		exit 1
-	}
+if $(file "${INITRDIMG}" | grep -q -e "gzip compressed data") ; then
+	# OK
+	true
+else
+	echo
+	echo "Error: Not an initrd image '${INITRDIMG}'!"
+	echo
+	exit 1
+fi
 KERNEL=${2:-''}
 if [ ! -e "${KERNEL}" ]; then
 	echo
@@ -101,15 +95,17 @@ if [ ! -e "${KERNEL}" ]; then
 	echo
 	exit 1
 fi
-file "${KERNEL}" | awk "{ if (/Linux/ && /kernel/ && /x86/) print \$1; }" | \
-	grep -q -E -e '^.+$' || \
-	{
-		echo
-		echo "Error: Not a Slackware kernel '${KERNEL}' !"
-		echo
-		exit 1
-	}
-
+if $(file "${KERNEL}" | \
+	awk "{ if (/Linux/ && /kernel/ && /x86/) print \$1; }" | \
+	grep -q -E -e '^.+$') ; then
+	# dummy
+	true
+else
+	echo
+	echo "Error: Not a Slackware kernel '${KERNEL}' !"
+	echo
+	exit 1
+fi
 
 HOST=$(basename "${INITRDIMG}" | sed -e "s#.gz##g")
 #todo: get from kickslack
@@ -135,18 +131,16 @@ EOF
 
 mkdir "${ISODIR}/kernels"
 cp "${KERNEL}" "${ISODIR}/kernels/vmlinuz"
-
 #
 # If #3 is not null, the user needs to
 # create an install cd, so we need to
-# mount Slackware CD-Rom, parse the
+# mount Slackware CD-ROM, parse the
 # tagfile, and copy the needed stuff.
 #
-
 if [ $# -eq 3 ]; then
 	PACKAGE_SERVER=$(grep -e 'PACKAGE_SERVER' "./config-files/${HOST}.cfg" | \
 		sed -e 's/PACKAGE_SERVER=//g')
-	PKG_REP=$(echo "${PACKAGE_SERVER}" | cut -d ":" -f 1)
+	PKG_REP=$(echo "${PACKAGE_SERVER}" | awk -F ':' '{ print $1 }')
 
 	if [ "${PKG_REP}" = "cdrom" ]; then
 		SLACKCD=${3:-''}
@@ -157,42 +151,51 @@ if [ $# -eq 3 ]; then
 			echo
 			exit 1
 		fi
+		if [ -d "${SLACKCD}/slackware" ]; then
+			LIBDIRSUFFIX=""
+		elif [ -d "${SLACKCD}/slackware64" ]; then
+			LIBDIRSUFFIX=64
+		else
+			echo
+			echo "Directory '${SLACKCD}/slackware' nor '${SLACKCD}/slackware64' found."
+			echo
+			exit 1
+		fi
 		#
 		# Packages
 		#
-		mkdir "${ISODIR}/slackware"
+		mkdir "${ISODIR}/slackware${LIBDIRSUFFIX}"
 		cp "${SLACKCD}/CHECKSUMS.md5" "${ISODIR}"
 	
 		for PACKAGE in $(grep -v -e '^#' "./taglists/${TAG}" | cut -d ":" -f 1); do
 			DISKSET=$(echo "${PACKAGE}" | cut -d "/" -f 1)
-			if [ ! -d "${ISODIR}/slackware/${DISKSET}" ]; then
-				mkdir "${ISODIR}/slackware/${DISKSET}"
+			if [ ! -d "${ISODIR}/slackware${LIBDIRSUFFIX}/${DISKSET}" ]; then
+				mkdir "${ISODIR}/slackware${LIBDIRSUFFIX}/${DISKSET}"
 				echo
 				printf "Copying packages for diskset [ %s ] " "${DISKSET}"
 			fi
 			printf "."
-			cp ${SLACKCD}/slackware/${PACKAGE}*.t?z \
-				"${ISODIR}/slackware/${DISKSET}/"
-			chmod 750 ${ISODIR}/slackware/${PACKAGE}*.t?z
+			cp ${SLACKCD}/slackware${LIBDIRSUFFIX}/${PACKAGE}*.t?z \
+				"${ISODIR}/slackware${LIBDIRSUFFIX}/${DISKSET}/"
+			chmod 750 ${ISODIR}/slackware${LIBDIRSUFFIX}/${PACKAGE}*.t?z
 		done
 	else
 		echo
-		echo "- Package repository is not on CD-Rom: packages will not be copied."
+		echo "- Package repository is not on CD-ROM: packages will not be copied."
 	fi
 fi
 
 echo
 echo
 echo "-------------- Creating ISO image: -------------"
-mkisofs -R -J -l -o "${BSDIR}/${CD_IMAGE}" -b isolinux/isolinux.bin -c isolinux/boot.cat \
+mkisofs -R -J -l -o "${BSDIR}/${CD_IMAGE}" -b isolinux/isolinux.bin \
+	-c isolinux/boot.cat \
 	-sort "${ISODIR}/isolinux/iso.sort" -no-emul-boot -boot-load-size 4 \
 	-boot-info-table -V "Slack-Kickstart" -A "Slack-Kickstart" "${ISODIR}"
 echo "------------------------------------------------"
-
 #
 # Cleans $ISODIR
 #
-
 rm -rf "${ISODIR}"
 
 echo
