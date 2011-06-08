@@ -344,7 +344,7 @@ sed -r -e "/^root:/c \root:${PASSWDENC}:14466:0:::::" \
 	etc/shadow.org > etc/shadow
 rm -f etc/shadow.org
 #### elf libs
-ELFPKG=$(parse_package 'aaa_elflibs-')
+#ELFPKG=$(parse_package 'aaa_elflibs-')
 #explodepkg "${ELFPKG}" 1>/dev/null
 #sh ./install/doinst.sh
 #rm -rf ./install/
