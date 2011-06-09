@@ -26,6 +26,16 @@ touch /mnt/etc/mtab
 # Checks if using smart_array or ataraid
 #
 Check_Smart_Array
+# Note: this is for PXE boots which won't need any bootloader
+if [ ! -e /mnt/sbin/lilo ] || [ ! -x /mnt/sbin/lilo ]; then
+	echo
+	echo "LiLO not found or not executable."
+	echo "You forgot to install LiLO or installing PXE machine."
+	echo "Skipping LiLO installation."
+	echo
+	exit 0
+fi
+
 #
 # If kernel name is 'bzImage'
 # it's better to rename it as:
