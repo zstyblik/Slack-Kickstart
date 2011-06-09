@@ -11,6 +11,12 @@
 #
 
 REDIR=/dev/tty4
+ARCH=$(uname -m)
+if [ ${ARCH} = 'x86_64' ]; then
+	LIBDIRSUFFIX=64
+else
+	LIBDIRSUFFIX=''
+fi
 
 if [ ! -d /var/log/mount ]; then
 	mkdir -p /var/log/mount
@@ -39,13 +45,6 @@ Create_Install_List() {
 #
 # Creates /mnt/PkgList.txt from /mnt/CHECKSUMS.md5
 #
-# TODO ~ slackware64, .txz -> in 64bits
-	ARCH=$(uname -m)
-	if [ ${ARCH} = 'x86_64' ]; then
-		LIBDIRSUFFIX=64
-	else
-		LIBDIRSUFFIX=''
-	fi
 	cat /mnt/CHECKSUMS.md5 | grep -e "./slackware${LIBDIRSUFFIX}/" | \
 		grep -E -e "\.t(g|x)z$" | \
 		cut -d " " -f 3 | cut -d "/" -f 4 > /mnt/PkgList.txt
@@ -144,13 +143,6 @@ HTTP_FTP_Install() {
 	#
 	# Downloads and installs packages.
 	#
-	# TODO
-	ARCH=$(uname -m)
-	if [ ${ARCH} = 'x86_64' ]; then
-		LIBDIRSUFFIX=64
-	else
-		LIBDIRSUFFIX=''
-	fi
 	for PACKAGE in $(cat /mnt/usr/Download/install.list); do
 		#
 		# Creates diskset directory, downloads package
