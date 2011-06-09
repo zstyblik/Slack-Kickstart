@@ -74,23 +74,23 @@ if [ -x /etc/rc.d/rc.fuse ]; then
   sh /etc/rc.d/rc.fuse start
 fi
 
+# Note: commented out due to problems and RTC is missing
 # Set the system time from the hardware clock using hwclock --hctosys.
-# TODO ~ later
-if [ -x /sbin/hwclocke ]; then
-  # Check for a broken motherboard RTC clock (where ioports for rtc are
-  # unknown) to prevent hwclock causing a hang:
-	# Note: doesn't work with Busybox
-  if ! $(/bin/grep -q -w -e 'rtc' /proc/ioports) ; then
-    CLOCK_OPT="--directisa"
-  fi
-  if $(/bin/grep -w -q -e "^UTC" /etc/hardwareclock) ; then
-    echo "Setting system time from the hardware clock (UTC)."
-    /sbin/hwclock $CLOCK_OPT --utc --hctosys
-  else
-    echo "Setting system time from the hardware clock (localtime)."
-    /sbin/hwclock $CLOCK_OPT --localtime --hctosys
-  fi
-fi
+#if [ -x /sbin/hwclock ]; then
+#  # Check for a broken motherboard RTC clock (where ioports for rtc are
+#  # unknown) to prevent hwclock causing a hang:
+#	# Note: doesn't work with Busybox
+#  if ! $(/bin/grep -q -w -e 'rtc' /proc/ioports) ; then
+#    CLOCK_OPT="--directisa"
+#  fi
+#  if $(/bin/grep -w -q -e "^UTC" /etc/hardwareclock) ; then
+#    echo "Setting system time from the hardware clock (UTC)."
+#    /sbin/hwclock $CLOCK_OPT --utc --hctosys
+#  else
+#    echo "Setting system time from the hardware clock (localtime)."
+#    /sbin/hwclock $CLOCK_OPT --localtime --hctosys
+#  fi
+#fi
 
 # Test to see if the root partition is read-only, like it ought to be.
 READWRITE=no
