@@ -448,6 +448,13 @@ popd
 pushd "${INITRDMOUNT}"
 mkdir -p ./usr/lib/setup 2>/dev/null
 cp -r ${CWD}/setup/* ./usr/lib/setup/
+cat > ./usr/sbin/setup << EOF
+#!/bin/ash
+cd /usr/lib/setup
+./setup
+EOF
+chmod +x ./usr/sbin/setup
+#
 sed -r -e "s#^PASSWD=.*\$#PASSWD='${PASSWDENC}'#" \
 	"${CWD}/${KSCONFIG}" > etc/Kickstart.cfg
 # makedevs.sh is being copied from imagefs dir
