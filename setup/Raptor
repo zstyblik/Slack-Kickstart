@@ -50,5 +50,5 @@ esac
 ##################
 # Kernel install #
 ##################
-# TODO ~ install kernel from package instead
+# Kernel is being installed from package
 #cp "/kernel/${KERN}" /mnt/boot
