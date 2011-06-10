@@ -161,5 +161,7 @@ fi
 if [ "${AUTOUPDATE}" = "swaret" ]; then
 	/usr/lib/setup/Swaret
 fi
-# TODO ~ slackpkg
+if [ "${AUTOUPDATE}" = "slackpkg" ]; then
+	/usr/lib/setup/Slackpkg
+fi
 touch /tmp/Kickstart.END
