@@ -17,8 +17,10 @@
 #########################
 #
 # Creates device nodes
-# TODO ~ mkdev is required
-#/usr/sbin/makedevs.sh > ${REDIR} 2>&1
+# Note: makedev command seems to be gone
+if ! $(ps aux | grep -e 'udevd' | grep -q -v -e 'grep'); then
+	/usr/sbin/makedevs.sh > ${REDIR} 2>&1
+fi
 #
 # Clears MBR & Partition table
 #
@@ -53,7 +55,9 @@ echo ",,,*" | sfdisk --force ${BOOTDEV} -N1 > ${REDIR} 2>&1
 #
 # Device creation: now we need to create
 # dev nodes for the new partitions
-#
-#/usr/sbin/makedevs.sh > ${REDIR} 2>&1
+# Note: makedev command seems to be gone.
+if ! $(ps aux | grep -e 'udevd' | grep -q -v -e 'grep'); then
+	/usr/sbin/makedevs.sh > ${REDIR} 2>&1
+fi
 echo "[OK]"
 echo
