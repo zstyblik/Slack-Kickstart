@@ -21,9 +21,9 @@ RDSIZE=65536
 BLKSIZE=1024
 
 SCRIPTNAME=$(basename "${0}")
-rm -f "${TMPDIR}/${SCRIPTNAME}.out.log"
-touch "${TMPDIR}/${SCRIPTNAME}.out.log"
-exec &>"${TMPDIR}/${SCRIPTNAME}.stdout.log"
+rm -f "${TMPDIR}/${SCRIPTNAME}.stderr.log"
+touch "${TMPDIR}/${SCRIPTNAME}.stderr.log"
+exec 2>"${TMPDIR}/${SCRIPTNAME}.stderr.log"
 
 # DESC: removes /usr/man, /usr/doc and /usr/share
 clean_usr()
