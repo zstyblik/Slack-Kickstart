@@ -153,7 +153,8 @@ printf "\nChecking package server ..... "
 # Package server - FTP/HTTP
 #--------------------------
 if [ "${PKG_SRC}" = "ftp" -o "${PKG_SRC}" = "http" ]; then
-	wget "${PACKAGE_SERVER}/CHECKSUMS.md5" -O /mnt/CHECKSUMS.md5 > /dev/null 2>&1
+	wget -T 30 "${PACKAGE_SERVER}/CHECKSUMS.md5" \
+		-O /mnt/CHECKSUMS.md5 > /dev/null 2>&1
 	if [ ! -s /mnt/CHECKSUMS.md5 ]; then
 		touch /tmp/CHECKLIST_FAILED
 		printf "[FAILED]\n\n"
