@@ -12,7 +12,7 @@ DROPBEARVER='0.53.1'
 LIBDIRSUFFIX=64
 IMAGEFSDIR="./imagefs"
 INITRDMOUNT='/mnt/initrd'
-SLACKPATH='/mnt/cdrom/'
+SLACKCDPATH='/mnt/cdrom/'
 TMPDIR='/tmp'
 
 # Ramdisk Constants
@@ -109,12 +109,12 @@ parse_package()
 	if [ -z "${PKGNEEDLE}" ]; then
 		return 1
 	fi
-	if [ ! -e "${SLACKPATH}/CHECKSUMS.md5" ]; then
-#		echo "File '${SLACKPATH}/CHECKSUMS.md5' doesn't seem to exist."
+	if [ ! -e "${SLACKCDPATH}/CHECKSUMS.md5" ]; then
+#		echo "File '${SLACKCDPATH}/CHECKSUMS.md5' doesn't seem to exist."
 		echo ""
 		return 1
 	fi
-	PKGFOUND=$(grep -e "${PKGNEEDLE}"  "${SLACKPATH}/CHECKSUMS.md5" | \
+	PKGFOUND=$(grep -e "${PKGNEEDLE}"  "${SLACKCDPATH}/CHECKSUMS.md5" | \
 		grep -e "./slackware${LIBDIRSUFFIX}" | grep -E -e '.t?z$' | \
 		awk '{ print $2 }')
 	if [ -z "${PKGFOUND}" ]; then
@@ -122,7 +122,7 @@ parse_package()
 		echo ""
 		return 1
 	fi
-	echo "${SLACKPATH}/${PKGFOUND}"
+	echo "${SLACKCDPATH}/${PKGFOUND}"
 } # parse_package
 # DESC: show help text
 show_help() 
@@ -174,12 +174,12 @@ if [ ! -d "${IMAGEFSDIR}" ]; then
 	fi
 fi
 
-if [ -d "${SLACKPATH}/slackware" ]; then
+if [ -d "${SLACKCDPATH}/slackware" ]; then
 	LIBDIRSUFFIX=""
-elif [ -d "${SLACKPATH}/slackware64" ]; then
+elif [ -d "${SLACKCDPATH}/slackware64" ]; then
 	LIBDIRSUFFIX=64
 else
-	echo "No '${SLACKPATH}/slackware' nor '${SLACKPATH}/slackware64' found."
+	echo "No '${SLACKCDPATH}/slackware' nor '${SLACKCDPATH}/slackware64' found."
 	exit 1
 fi
 
