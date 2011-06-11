@@ -346,9 +346,11 @@ if [ ! -z "${SLACKETCPKG}" ]; then
 fi # if SLACKETCPKG
 #### elf libs
 #ELFPKG=$(parse_package 'aaa_elflibs-')
-#explodepkg "${ELFPKG}" 1>/dev/null
-#sh ./install/doinst.sh
-#rm -rf ./install/
+#if [ ! -z "${ELFPKG}" ]; then
+#	explodepkg "${ELFPKG}" 1>/dev/null
+#	sh ./install/doinst.sh
+#	rm -rf ./install/
+#fi # if $ELFPKG
 #### glibc-solibs
 GLIBCSOPKG=$(parse_package 'glibc-solibs-')
 if [ ! -z "${GLIBCSOPKG}" ]; then
