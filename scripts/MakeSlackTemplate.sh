@@ -596,7 +596,7 @@ if [ ! -z "${TERMIPKG}" ]; then
 	explodepkg "${TERMIPKG}" 1>/dev/null
 	rm -rf ./install
 	popd
-fi # if TERMIPKG
+fi # if $TERMIPKG
 #### coreutils
 COREUTIPKG=$(parse_package 'coreutils-')
 if [ ! -z "${COREUTIPKG}" ]; then
@@ -610,7 +610,7 @@ if [ ! -z "${COREUTIPKG}" ]; then
 	cp "${TMPDIR}/slack-tar/bin/tar-1.13" "${INITRDMOUNT}/bin/"
 	cd "${TMPDIR}"
 	rm -rf "${TMPDIR}/slack-coreutils"
-fi
+fi # if $COREUTILS
 #### Finish up...
 cp -pr ${CWD}/${IMAGEFSDIR}/* "${INITRDMOUNT}/"
 if [ -e "/usr/share/zoneinfo/${TIMEZONE}" ]; then
