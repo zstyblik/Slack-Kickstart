@@ -310,56 +310,57 @@ cp -apr "${KMODPATH}/kernel/drivers/virtio" \
 cp "etc/rc.d/rc.modules-${KERNELVERNO}.new" \
 	"${INITRDMOUNT}/etc/rc.d/rc.modules" || true
 pushd "${INITRDMOUNT}"
-# -v 
 depmod -b ./ "${KERNELVERNO}"
 popd
-pushd "${INITRDMOUNT}"
+
 #### udev
 UDEVPKG=$(parse_package 'udev-')
-explodepkg "${UDEVPKG}" 1>/dev/null
-sh ./install/doinst.sh
-rm -rf './install'
-getlibs sbin/udevd
-getlibs sbin/udevadm
-clean_usr
+if [ ! -z "${UDEVPKG}" ]; then
+	echo "Installing package '${UDEVPKG}'"
+	pushd "${INITRDMOUNT}"
+	explodepkg "${UDEVPKG}" 1>/dev/null
+	sh ./install/doinst.sh
+	rm -rf './install'
+	getlibs sbin/udevd
+	getlibs sbin/udevadm
+	clean_usr
+	popd
+fi # if $UDEVPKG
 #### etc
 SLACKETCPKG=$(parse_package 'etc-')
-explodepkg "${SLACKETCPKG}" 1>/dev/null
-sh ./install/doinst.sh
-rm -rf ./install/
-find ./tmp | xargs rm -rf
-cp -apr /etc/protocols etc/
-cp -apr /etc/hosts.* etc/
-touch etc/resolv.conf
-cp /etc/host.conf etc/
-cp /etc/networks etc/
-rm -f etc/termcap-BSD
-clean_usr
-#### passwords
-cp etc/passwd etc/passwd.org
-sed -e 's#bash#sh#g' etc/passwd.org > etc/passwd
-rm -f etc/passwd.org
-cp etc/shadow etc/shadow.org
-sed -r -e "/^root:/c \root:${PASSWDENC}:14466:0:::::" \
-	etc/shadow.org > etc/shadow
-rm -f etc/shadow.org
+if [ ! -z "${SLACKETCPKG}" ]; then
+	echo "Installing package '${SLACKETCPKG}'"
+	pushd "${INITRDMOUNT}"
+	explodepkg "${SLACKETCPKG}" 1>/dev/null
+	sh ./install/doinst.sh
+	rm -rf ./install/
+	find ./tmp | xargs rm -rf
+	cp -apr /etc/protocols etc/
+	cp -apr /etc/hosts.* etc/
+	touch etc/resolv.conf
+	cp /etc/host.conf etc/
+	cp /etc/networks etc/
+	rm -f etc/termcap-BSD
+	clean_usr
+	popd
+fi # if SLACKETCPKG
 #### elf libs
 #ELFPKG=$(parse_package 'aaa_elflibs-')
 #explodepkg "${ELFPKG}" 1>/dev/null
 #sh ./install/doinst.sh
 #rm -rf ./install/
-popd
 #### glibc-solibs
 GLIBCSOPKG=$(parse_package 'glibc-solibs-')
-cd "${TMPDIR}"
-rm -rf "${TMPDIR}/slack-glibc-solibs"
-mkdir "${TMPDIR}/slack-glibc-solibs"
-cd "${TMPDIR}/slack-glibc-solibs"
-explodepkg "${GLIBCSOPKG}" 1>/dev/null
-cp -apr ./lib${LIBDIRSUFFIX}/incoming/* "${INITRDMOUNT}/lib${LIBDIRSUFFIX}/"
-cp -apr ${TMPDIR}/slack-glibc-solibs/lib${LIBDIRSUFFIX}/libSegFault.so \
-	"${INITRDMOUNT}/lib${LIBDIRSUFFIX}/"
-cat > "${INITRDMOUNT}/mydoinst.sh" <<EOF
+if [ ! -z "${GLIBCSOPKG}" ]; then
+	cd "${TMPDIR}"
+	rm -rf "${TMPDIR}/slack-glibc-solibs"
+	mkdir "${TMPDIR}/slack-glibc-solibs"
+	cd "${TMPDIR}/slack-glibc-solibs"
+	explodepkg "${GLIBCSOPKG}" 1>/dev/null
+	cp -apr ./lib${LIBDIRSUFFIX}/incoming/* "${INITRDMOUNT}/lib${LIBDIRSUFFIX}/"
+	cp -apr ${TMPDIR}/slack-glibc-solibs/lib${LIBDIRSUFFIX}/libSegFault.so \
+		"${INITRDMOUNT}/lib${LIBDIRSUFFIX}/"
+	cat > "${INITRDMOUNT}/mydoinst.sh" <<EOF
 ( cd lib${LIBDIRSUFFIX} ; rm -rf libnss_nis.so.2 )
 ( cd lib${LIBDIRSUFFIX} ; ln -sf libnss_nis-2.13.so libnss_nis.so.2 )
 ( cd lib${LIBDIRSUFFIX} ; rm -rf libm.so.6 )
@@ -399,34 +400,37 @@ cat > "${INITRDMOUNT}/mydoinst.sh" <<EOF
 ( cd lib${LIBDIRSUFFIX} ; rm -rf librt.so.1 )
 ( cd lib${LIBDIRSUFFIX} ; ln -sf librt-2.13.so librt.so.1 )
 EOF
-pushd "${INITRDMOUNT}"
-sh mydoinst.sh
-rm -f mydoinst.sh
-popd
-cd "${TMPDIR}"
-rm -rf "${TMPDIR}/slack-glibc-solibs"
+	pushd "${INITRDMOUNT}"
+	sh mydoinst.sh
+	rm -f mydoinst.sh
+	popd
+	cd "${TMPDIR}"
+	rm -rf "${TMPDIR}/slack-glibc-solibs"
+fi # if GLIBCSOPKG
 #### modutils
 # Note: this is an isurance of module auto-loading; feature you *can* live 
 # without.
-pushd "${INITRDMOUNT}"
 MODULEINITPKG=$(parse_package 'module-init-tools-')
-rm ./sbin/depmod
-rm ./sbin/insmod
-rm ./sbin/lsmod
-rm ./sbin/modinfo
-rm ./sbin/modprobe
-rm ./sbin/rmmod
-explodepkg "${MODULEINITPKG}" 1>/dev/null
-getlibs sbin/lsmod
-getlibs sbin/depmod
-getlibs sbin/insmod
-getlibs sbin/lsmod
-getlibs sbin/rmmod
-getlibs sbin/modprobe
-getlibs sbin/modinfo
-rm -rf ./install
-clean_usr
-popd
+if [ ! -z "${MODULEINITPKG}" ]; then
+	pushd "${INITRDMOUNT}"
+	rm ./sbin/depmod
+	rm ./sbin/insmod
+	rm ./sbin/lsmod
+	rm ./sbin/modinfo
+	rm ./sbin/modprobe
+	rm ./sbin/rmmod
+	explodepkg "${MODULEINITPKG}" 1>/dev/null
+	getlibs sbin/lsmod
+	getlibs sbin/depmod
+	getlibs sbin/insmod
+	getlibs sbin/lsmod
+	getlibs sbin/rmmod
+	getlibs sbin/modprobe
+	getlibs sbin/modinfo
+	rm -rf ./install
+	clean_usr
+	popd
+fi # if MODULEINITPKG
 #### Dropbear
 cd "${TMPDIR}"
 if [ ! -e "dropbear-${DROPBEARVER}.tar.bz2" ]; then
@@ -463,120 +467,165 @@ popd
 # TODO ~ btrfs-progs-20110327-x86_64-1.txz
 #### EXT utils
 E2FSPKG=$(parse_package 'e2fsprogs-')
-pushd "${INITRDMOUNT}"
-explodepkg "${E2FSPKG}" 1>/dev/null
-sh ./install/doinst.sh
-rm -rf "./usr/lib${LIBDIRSUFFIX}/pkgconfig"
-rm -rf ./usr/include
-rm -rf ./usr/man
-rm -rf ./usr/share
-rm -rf ./install
-popd
+if [ ! -z "${E2FSPKG}" ]; then
+	echo "Installing package '${E2FSPKG}'"
+	pushd "${INITRDMOUNT}"
+	explodepkg "${E2FSPKG}" 1>/dev/null
+	sh ./install/doinst.sh
+	rm -rf "./usr/lib${LIBDIRSUFFIX}/pkgconfig"
+	rm -rf ./usr/include
+	rm -rf ./usr/man
+	rm -rf ./usr/share
+	rm -rf ./install
+	popd
+fi # if $E2FSPKG
 #### JFS
 JFSPKG=$(parse_package 'jfsutils-')
-rm -rf "${TMPDIR}/slack-jfsutils"
-mkdir "${TMPDIR}/slack-jfsutils"
-cd "${TMPDIR}/slack-jfsutils"
-explodepkg "${JFSPKG}" 1>/dev/null
-rm -rf ./usr/doc
-rm -rf "./usr/lib${LIBDIRSUFFIX}/pkgconfig"
-rm -rf ./usr/include
-rm -rf ./usr/man
-rm -rf ./usr/share
-rm -rf ./install
-cp -apr ./ "${INITRDMOUNT}" 
-cd ../
-rm -rf "${TMPDIR}/slack-jfsutils"
+if [ ! -z "${JFSPKG}" ]; then
+	echo "Installing package '${JFSPKG}'"
+	rm -rf "${TMPDIR}/slack-jfsutils"
+	mkdir "${TMPDIR}/slack-jfsutils"
+	cd "${TMPDIR}/slack-jfsutils"
+	explodepkg "${JFSPKG}" 1>/dev/null
+	rm -rf ./usr/doc
+	rm -rf "./usr/lib${LIBDIRSUFFIX}/pkgconfig"
+	rm -rf ./usr/include
+	rm -rf ./usr/man
+	rm -rf ./usr/share
+	rm -rf ./install
+	cp -apr ./ "${INITRDMOUNT}" 
+	cd "${TMPDIR}"
+	rm -rf "${TMPDIR}/slack-jfsutils"
+fi # if $JFSPKG
 #### ReiserFS
 REISERFSPKG=$(parse_package 'reiserfsprogs-')
-rm -rf "${TMPDIR}/slack-reiserfs"
-mkdir "${TMPDIR}/slack-reiserfs"
-cd "${TMPDIR}/slack-reiserfs"
-explodepkg "${REISERFSPKG}" 1>/dev/null
-rm -rf ./usr/doc
-rm -rf "./usr/lib${LIBDIRSUFFIX}/pkgconfig"
-rm -rf ./usr/include
-rm -rf ./usr/man
-rm -rf ./usr/share
-rm -rf ./install
-cp -apr ./ "${INITRDMOUNT}" 
-cd ../
-rm -rf "${TMPDIR}/slack-reiserfs"
+if [ ! -z "${REISERFSPKG}" ]; then
+	echo "Installing package '${REISERFSPKG}'"
+	rm -rf "${TMPDIR}/slack-reiserfs"
+	mkdir "${TMPDIR}/slack-reiserfs"
+	cd "${TMPDIR}/slack-reiserfs"
+	explodepkg "${REISERFSPKG}" 1>/dev/null
+	rm -rf ./usr/doc
+	rm -rf "./usr/lib${LIBDIRSUFFIX}/pkgconfig"
+	rm -rf ./usr/include
+	rm -rf ./usr/man
+	rm -rf ./usr/share
+	rm -rf ./install
+	cp -apr ./ "${INITRDMOUNT}" 
+	cd "${TMPDIR}"
+	rm -rf "${TMPDIR}/slack-reiserfs"
+fi # if $REISERFSPKG
 #### XFS 
 XFSPKG=$(parse_package 'xfsprogs-')
-rm -rf "${TMPDIR}/slack-xfs"
-mkdir "${TMPDIR}/slack-xfs"
-cd "${TMPDIR}/slack-xfs"
-explodepkg "${XFSPKG}" 1>/dev/null
-rm -rf ./usr/doc
-rm -rf "./usr/lib${LIBDIRSUFFIX}/pkgconfig"
-rm -rf ./usr/include
-rm -rf ./usr/man
-rm -rf ./usr/share
-rm -rf ./install
-cp -apr ./ "${INITRDMOUNT}" 
-cd "${TMPDIR}"
-rm -rf "${TMPDIR}/slack-xfs"
+if [ ! -z "${XFSPKG}" ]; then
+	echo "Installing package '${XFSPKG}'"
+	rm -rf "${TMPDIR}/slack-xfs"
+	mkdir "${TMPDIR}/slack-xfs"
+	cd "${TMPDIR}/slack-xfs"
+	explodepkg "${XFSPKG}" 1>/dev/null
+	rm -rf ./usr/doc
+	rm -rf "./usr/lib${LIBDIRSUFFIX}/pkgconfig"
+	rm -rf ./usr/include
+	rm -rf ./usr/man
+	rm -rf ./usr/share
+	rm -rf ./install
+	cp -apr ./ "${INITRDMOUNT}" 
+	cd "${TMPDIR}"
+	rm -rf "${TMPDIR}/slack-xfs"
+fi # if $XFSPKG
 #### util-linux
 UTILLNXPKG=$(parse_package 'util-linux-')
-cd "${TMPDIR}"
-rm -rf "${TMPDIR}/slack-util-linux"
-mkdir "${TMPDIR}/slack-util-linux"
-cd "${TMPDIR}/slack-util-linux"
-explodepkg "${UTILLNXPKG}" 1>/dev/null
-cp ./sbin/sfdisk "${INITRDMOUNT}/sbin/"
-cp -apr ./lib${LIBDIRSUFFIX} "${INITRDMOUNT}/"
-cp -r ./install "${INITRDMOUNT}/"
-pushd "${INITRDMOUNT}"
-sh ./install/doinst.sh
-rm -rf ./install
-rm -f clock.8.gz 
-rm -f jaztool.1.gz
-popd
-cd "${TMPDIR}"
-rm -rf slack-util-linux
-
-pushd "${INITRDMOUNT}"
+if [ ! -z "${UTILLNXPKG}" ]; then
+	echo "Installing package '${UTILLNXPKG}'"
+	cd "${TMPDIR}"
+	rm -rf "${TMPDIR}/slack-util-linux"
+	mkdir "${TMPDIR}/slack-util-linux"
+	cd "${TMPDIR}/slack-util-linux"
+	explodepkg "${UTILLNXPKG}" 1>/dev/null
+	cp ./sbin/sfdisk "${INITRDMOUNT}/sbin/"
+	cp -apr ./lib${LIBDIRSUFFIX} "${INITRDMOUNT}/"
+	cp -r ./install "${INITRDMOUNT}/"
+	pushd "${INITRDMOUNT}"
+	sh ./install/doinst.sh
+	rm -rf ./install
+	rm -f clock.8.gz 
+	rm -f jaztool.1.gz
+	popd
+	cd "${TMPDIR}"
+	rm -rf slack-util-linux
+fi # if $UTILLNXPKG
 #### NFS utils
 NFSPKG=$(parse_package 'nfs-utils-')
-explodepkg "${NFSPKG}" 1>/dev/null
-sh ./install/doinst.sh
-rm -rf ./install
-clean_usr
+if [ ! -z "${NFSPKG}" ]; then
+	echo "Installing package '${NFSPKG}'"
+	pushd "${INITRDMOUNT}"
+	explodepkg "${NFSPKG}" 1>/dev/null
+	sh ./install/doinst.sh
+	rm -rf ./install
+	clean_usr
+	popd
+fi # if $NFSPKG
 #### Portmap/RPC
 PORTMAPPKG=$(parse_package 'portmap-')
-explodepkg "${PORTMAPPKG}" 1>/dev/null
-sh ./install/doinst.sh
-rm -rf ./install
-clean_usr
+if [ ! -z "${PORTMAPPKG}" ]; then
+	echo "Installing package '${PORTMAPPKG}'"
+	pushd "${INITRDMOUNT}"
+	explodepkg "${PORTMAPPKG}" 1>/dev/null
+	sh ./install/doinst.sh
+	rm -rf ./install
+	clean_usr
+	popd
+fi # if $PORTMAPPKG
 #### xz
 XZPKG=$(parse_package 'xz-')
-explodepkg "${XZPKG}" 1>/dev/null
-rm -rf ./usr/include/lzma
-sh ./install/doinst.sh
-rm -rf ./install
-clean_usr
+if [ ! -z "${XZPKG}" ]; then
+	echo "Installing package '${XZPKG}'"
+	pushd "${INITRDMOUNT}"
+	explodepkg "${XZPKG}" 1>/dev/null
+	rm -rf ./usr/include/lzma
+	sh ./install/doinst.sh
+	rm -rf ./install
+	clean_usr
+	popd
+fi # if $XZPKG
 #### terminfo
 TERMIPKG=$(parse_package 'aaa_terminfo-')
-explodepkg "${TERMIPKG}" 1>/dev/null
-rm -rf ./install
-popd
+if [ ! -z "${TERMIPKG}" ]; then
+	echo "Installing package '${TERMIPKG}'"
+	pushd "${INITRDMOUNT}"
+	explodepkg "${TERMIPKG}" 1>/dev/null
+	rm -rf ./install
+	popd
+fi # if TERMIPKG
 #### coreutils
 COREUTIPKG=$(parse_package 'coreutils-')
-rm -rf "${TMPDIR}/slack-coreutils"
-mkdir "${TMPDIR}/slack-coreutils"
-cd "${TMPDIR}/slack-coreutils"
-explodepkg "${COREUTIPKG}" 1>/dev/null
-cp "${TMPDIR}/slack-coreutils/bin/paste" "${INITRDMOUNT}/bin/paste"
-cp "${TMPDIR}/slack-tar/bin/tar-1.13" "${INITRDMOUNT}/bin/"
-cd "${TMPDIR}"
-rm -rf "${TMPDIR}/slack-coreutils"
+if [ ! -z "${COREUTIPKG}" ]; then
+	echo "Installing package '${COREUTIPKG}'"
+	cd "${TMPDIR}"
+	rm -rf "${TMPDIR}/slack-coreutils"
+	mkdir "${TMPDIR}/slack-coreutils"
+	cd "${TMPDIR}/slack-coreutils"
+	explodepkg "${COREUTIPKG}" 1>/dev/null
+	cp "${TMPDIR}/slack-coreutils/bin/paste" "${INITRDMOUNT}/bin/paste"
+	cp "${TMPDIR}/slack-tar/bin/tar-1.13" "${INITRDMOUNT}/bin/"
+	cd "${TMPDIR}"
+	rm -rf "${TMPDIR}/slack-coreutils"
+fi
 #### Finish up...
 cp -pr ${CWD}/${IMAGEFSDIR}/* "${INITRDMOUNT}/"
 if [ -e "/usr/share/zoneinfo/${TIMEZONE}" ]; then
-	echo "Copying TZ settings."
+	echo "Configuring TZ settings"
 	cp "/usr/share/zoneinfo/${TIMEZONE}" "${INITRDMOUNT}/etc/localtime"
 fi
+#### passwords
+cp etc/passwd etc/passwd.org
+sed -e 's#bash#sh#g' etc/passwd.org > etc/passwd
+rm -f etc/passwd.org
+cp etc/shadow etc/shadow.org
+sed -r -e "/^root:/c \root:${PASSWDENC}:14466:0:::::" \
+	etc/shadow.org > etc/shadow
+rm -f etc/shadow.org
+#
 df -h "${INITRDMOUNT}"
 umount "${INITRDMOUNT}"
 gzip -9 "${TMPDIR}/ramdisk.img"
