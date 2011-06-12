@@ -466,10 +466,11 @@ sed -r -e "s#^PASSWD=.*\$#PASSWD='${PASSWDENC}'#" \
 	"${CWD}/${KSCONFIG}" > etc/Kickstart.cfg
 # makedevs.sh is being copied from imagefs dir
 if [ ! -z "${TAG}" ] && [ -e "${CWD}/taglists/${TAG}" ]; then
-	echo "Adding TAG-list of packages"
-	for PKG in $(cat "${CWD}/taglists/${TAG}"); do
-		echo "${PKG}" >> etc/Kickstart.cfg
-	done
+	echo "Adding TAG-list of packages ~ '${TAG}'"
+	printf "#\n# Taglist: %s\n" "${TAG}" >> etc/Kickstart.cfg
+	awk '{ printf "#@%s\n", $0 }' "${CWD}/taglists/${TAG}" >> etc/Kickstart.cfg
+	printf "# END of Taglist: %s" $TAG >> etc/Kickstart.cfg
+	printf "\t\t[ OK ]\n"
 fi
 popd
 #### BTRFS
