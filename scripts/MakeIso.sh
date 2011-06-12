@@ -14,7 +14,7 @@
 WORKDIR='/tmp/'
 BSDIR="${WORKDIR}/Kickstart"
 ISODIR="${WORKDIR}/Kickstart/tmp"
-RDSIZE=65536
+RDSIZE=${RDSIZE:-65536}
 
 if [ ! -d "${WORKDIR}/Kickstart/tmp" ]; then
 	printf "Creating workdir '${WORKDIR}'..."
