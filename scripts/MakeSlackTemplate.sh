@@ -472,7 +472,15 @@ if [ ! -z "${TAG}" ] && [ -e "${CWD}/taglists/${TAG}" ]; then
 fi
 popd
 #### BTRFS
-# TODO ~ btrfs-progs-20110327-x86_64-1.txz
+BTRFSPKG=$(parse_package 'btrfs-progs-')
+if [ ! -z "${BTRFSPKG}" ]; then
+	echo "Installing package '${BTRFSPKG}'"
+	pushd "${INITRDMOUNT}"
+	explodepkg "${BTRFSPKG}" 1>/dev/null
+	rm -rf ./usr/man
+	rm -rf ./usr/doc
+	popd
+fi
 #### EXT utils
 E2FSPKG=$(parse_package 'e2fsprogs-')
 if [ ! -z "${E2FSPKG}" ]; then
