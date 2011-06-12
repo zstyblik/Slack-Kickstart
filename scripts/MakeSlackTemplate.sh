@@ -632,9 +632,10 @@ fi # if $COREUTILS
 cp -pr ${CWD}/${IMAGEFSDIR}/* "${INITRDMOUNT}/"
 if [ -e "/usr/share/zoneinfo/${TIMEZONE}" ]; then
 	echo "Configuring TZ settings"
-	cp "/usr/share/zoneinfo/${TIMEZONE}" "${INITRDMOUNT}/etc/localtime"
+	cat "/usr/share/zoneinfo/${TIMEZONE}" > "${INITRDMOUNT}/etc/localtime"
 fi
 #### passwords
+pushd "${INITRDMOUNT}"
 cp etc/passwd etc/passwd.org
 sed -e 's#bash#sh#g' etc/passwd.org > etc/passwd
 rm -f etc/passwd.org
@@ -642,6 +643,7 @@ cp etc/shadow etc/shadow.org
 sed -r -e "/^root:/c \root:${PASSWDENC}:14466:0:::::" \
 	etc/shadow.org > etc/shadow
 rm -f etc/shadow.org
+popd
 #
 df -h "${INITRDMOUNT}"
 umount "${INITRDMOUNT}"
