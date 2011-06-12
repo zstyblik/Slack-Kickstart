@@ -154,9 +154,8 @@ if [ -z "${TAG}" ] || [ ! -e "./taglists/${TAG}" ]; then
 	printf "TAG list empty or does not exist.\n"
 else
 	printf "#\n# Taglist: %s\n#" "${TAG}" >> mount/etc/Kickstart.cfg
-	for PACKAGE in $(grep -v -e "#" "./taglists/${TAG}"); do
-		echo "#@${PACKAGE}" >> mount/etc/Kickstart.cfg
-	done
+	grep -v -E -e "^#" "./taglists/${TAG}" | \
+		awk '{ printf "#@%s\n", $0 }' >> mount/etc/Kickstart.cfg
 	printf "# END of Taglist: %s" $TAG >> mount/etc/Kickstart.cfg
 	printf "\t\t[ OK ]\n"
 fi
