@@ -123,6 +123,7 @@ parse_package()
 		return 1
 	fi
 	echo "${SLACKCDPATH}/${PKGFOUND}"
+	return 0
 } # parse_package
 # DESC: show help text
 show_help() 
