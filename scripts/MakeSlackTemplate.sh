@@ -464,6 +464,12 @@ chmod +x ./usr/sbin/setup
 sed -r -e "s#^PASSWD=.*\$#PASSWD='${PASSWDENC}'#" \
 	"${CWD}/${KSCONFIG}" > etc/Kickstart.cfg
 # makedevs.sh is being copied from imagefs dir
+if [ ! -z "${TAG}" ] && [ -e "${CWD}/taglists/${TAG}" ]; then
+	echo "Adding TAG-list of packages"
+	for PKG in $(cat "${CWD}/taglists/${TAG}"); do
+		echo "${PKG}" >> etc/Kickstart.cfg
+	done
+fi
 popd
 #### BTRFS
 # TODO ~ btrfs-progs-20110327-x86_64-1.txz
