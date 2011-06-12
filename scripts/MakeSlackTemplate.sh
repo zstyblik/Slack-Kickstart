@@ -4,6 +4,7 @@
 # Missing features/TODO:
 # * chown root:root instead of stybla
 # * more than one HDD, mdadm, LVM ?
+# * pre-installed SSH keys ?
 set -e
 set -u
 
