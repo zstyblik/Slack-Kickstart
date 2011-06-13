@@ -594,6 +594,17 @@ if [ ! -z "${PORTMAPPKG}" ]; then
 	clean_usr
 	popd
 fi # if $PORTMAPPKG
+#### gzip ~ gzip is shipped with Busybox
+#GZIPPKG=$(parse_package 'gzip-')
+#if [ ! -z "${GZIPPKG}" ]; then
+#	echo "Installing package '${GZIPPKG}'"
+#	pushd "${INITRDMOUNT}"
+#	explodepkg "${GZIPPKG}" 1>/dev/null
+#	sh ./install/doinst.sh
+#	rm -rf ./install
+#	clean_usr
+#	popd
+#fi # if $GZIPPKG
 #### xz
 XZPKG=$(parse_package 'xz-')
 if [ ! -z "${XZPKG}" ]; then
