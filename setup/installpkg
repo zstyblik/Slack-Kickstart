@@ -70,8 +70,8 @@ export LANG
 # Return a package name that has been stripped of the dirname portion
 # and any of the valid extensions (only):
 pkgbase() {
-  PKGEXT=$(echo $1 | rev | cut -f 1 -d . | rev)
-  case $PKGEXT in
+  PKGEXT=$(printf "%s" "${1}" | rev | cut -f 1 -d '.' | rev)
+  case "${PKGEXT}" in
   'tgz' )
     PKGRETURN=$(basename $1 .tgz)
     ;;
@@ -88,8 +88,9 @@ pkgbase() {
     PKGRETURN=$(basename $1)
     ;;
   esac
-  echo $PKGRETURN
-}
+  printf "%s" "${PKGRETURN}"
+  return 0
+} # pkgbase()
 
 # If installpkg encounters a problem, it will return a non-zero error code.
 # If it finds more than one problem (i.e. with a list of packages) you'll only
@@ -107,9 +108,8 @@ MD5SUM=0
 
 # So that we know what to expect...
 umask 022
-TAR=tar-1.13
-$TAR --help 1> /dev/null 2> /dev/null
-if [ ! $? = 0 ]; then
+TAR='tar-1.13'
+if ! $($TAR --help 1> /dev/null 2> /dev/null) ; then
   TAR=tar
 fi
 if [ ! "$(LC_MESSAGES=C $TAR --version)" = "tar (GNU tar) 1.13
@@ -125,7 +125,7 @@ Written by John Gilmore and Jay Fenlason." ]; then
 fi
 
 usage() {
- cat << EOF
+  cat << EOF
 Usage: installpkg [options] <package_filename>
 
 Installpkg is used to install a .t{gz,bz,lz,xz} package like this:
@@ -148,46 +148,51 @@ options:      --warn (warn if files will be overwritten, but do not install)
               --md5sum (record the package's md5sum in the metadata file)
 
 EOF
-}
+  return 0
+} # usage()
 
 # Eliminate whitespace function:
 crunch() {
   while read FOO ; do
-    echo $FOO
+    printf "%s" "${FOO}"
   done
-}
+  return 0
+} # crunch()
 
 package_name() {
-  STRING=$(pkgbase $1)
+  STRING=$(pkgbase "${1}")
   # Check for old style package name with one segment:
-  if [ "$(echo $STRING | cut -f 1 -d -)" = "$(echo $STRING | cut -f 2 -d -)" ]; then
-    echo $STRING
+  if [ $(printf "%s" "${STRING}" | cut -f 1 -d '-') = $(printf "%s" \
+    "${STRING}" | cut -f 2 -d '-') ]; then
+    printf "%s" "${STRING}"
   else # has more than one dash delimited segment
     # Count number of segments:
     INDEX=1
-    while [ ! "$(echo $STRING | cut -f $INDEX -d -)" = "" ]; do
-      INDEX=$(expr $INDEX + 1)
+    while [ ! $(printf "%s" "${STRING}" | cut -f ${INDEX} -d '-') = "" ]; do
+      INDEX=$(($INDEX + 1))
     done
-    INDEX=$(expr $INDEX - 1) # don't include the null value
-    # If we don't have four segments, return the old-style (or out of spec) package name:
+    INDEX=$(($INDEX - 1)) # don't include the null value
+    # If we don't have four segments, return the old-style (or out of spec) 
+    # package name:
     if [ "$INDEX" = "2" -o "$INDEX" = "3" ]; then
-      echo $STRING
+      printf "%s" "${STRING}"
     else # we have four or more segments, so we'll consider this a new-style name:
-      NAME=$(expr $INDEX - 3)
-      NAME="$(echo $STRING | cut -f 1-$NAME -d -)"
-      echo $NAME
+      NAME=$(($INDEX - 3))
+      NAME=$(printf "%s" "${STRING}" | cut -f "1-${NAME}" -d '-')
+      printf "%s" "${NAME}"
       # cruft for later ;)
       #VER=$(expr $INDEX - 2)
-      #VER="$(echo $STRING | cut -f $VER -d -)"
+      #VER="$(echo $STRING | cut -f $VER -d '-')"
       #ARCH=$(expr $INDEX - 1)
-      #ARCH="$(echo $STRING | cut -f $ARCH -d -)"
-      #BUILD="$(echo $STRING | cut -f $INDEX -d -)"
+      #ARCH="$(echo $STRING | cut -f $ARCH -d '-')"
+      #BUILD="$(echo $STRING | cut -f $INDEX -d '-')"
     fi
   fi
-}
+  return 0
+} # package_name()
 
 # Parse options:
-MODE=install # standard text-mode
+MODE='install' # standard text-mode
 while [ 0 ]; do
   if [ "$1" = "-warn" -o "$1" = "--warn" ]; then
     MODE=warn
@@ -237,28 +242,29 @@ while [ 0 ]; do
 done
 
 # Set the prefix for the package database directories (packages, scripts).
-ADM_DIR="$ROOT/var/log"
+ADM_DIR="${ROOT}/var/log"
 # If the directories don't exist, "initialize" the package database:
 for PKGDBDIR in packages removed_packages removed_scripts scripts setup ; do
-  if [ ! -d $ADM_DIR/$PKGDBDIR ]; then
-    rm -rf $ADM_DIR/$PKGDBDIR # make sure it's not a symlink or something stupid
-    mkdir -p $ADM_DIR/$PKGDBDIR
-    chmod 755 $ADM_DIR/$PKGDBDIR 
+  if [ ! -d "${ADM_DIR}/${PKGDBDIR}" ]; then
+    # make sure it's not a symlink or something stupid
+    rm -rf "${ADM_DIR}/${PKGDBDIR}" 
+    mkdir -p "${ADM_DIR}/${PKGDBDIR}"
+    chmod 755 "${ADM_DIR}/${PKGDBDIR}" 
   fi
 done
 
 # Make sure there's a proper temp directory:
-TMP=$ADM_DIR/setup/tmp
+TMP="${ADM_DIR}/setup/tmp"
 # If the $TMP directory doesn't exist, create it:
-if [ ! -d $TMP ]; then
-  rm -rf $TMP # make sure it's not a symlink or something stupid
-  mkdir -p $TMP
-  chmod 700 $TMP # no need to leave it open
+if [ ! -d "${TMP}" ]; then
+  rm -rf "${TMP}" # make sure it's not a symlink or something stupid
+  mkdir -p "${TMP}"
+  chmod 700 "${TMP}" # no need to leave it open
 fi
 
 # usage(), exit if called with no arguments:
 if [ $# = 0 ]; then
-  usage;
+  usage
   exit
 fi
 
@@ -267,9 +273,9 @@ if [ "$MODE" = "warn" ]; then
   while [ -f "$1" ]; do
     mkdir -p $TMP/scan$$
     # Determine extension:
-    packageext="$( echo $1 | rev | cut -f 1 -d . | rev)"
+    packageext="$( printf "%s" "${1}" | rev | cut -f 1 -d '.' | rev)"
     # Determine compressor utility:
-    case $packageext in
+    case "${packageext}" in
     'tgz' )
       packagecompression=gzip
       ;;
@@ -285,21 +291,21 @@ if [ "$MODE" = "warn" ]; then
     esac
     ( cd $TMP/scan$$ ; $packagecompression -dc | $TAR xf - install ) < $1 2> /dev/null 
     if [ -r $TMP/scan$$/install/doinst.sh ]; then
-      if cat $TMP/scan$$/install/doinst.sh | grep ' rm -rf ' 1>/dev/null 2>/dev/null ; then
-        cat $TMP/scan$$/install/doinst.sh | grep ' rm -rf ' > $TMP/scan$$/install/delete
-	for f in `cat $TMP/scan$$/install/delete | cut -f 3,7 -d ' ' | tr ' ' '/'`; do
-	  f="/$f"
-	  if [ -f "$f" -o -L "$f" ]; then
-	    echo "$f"
-	  fi
-	done
+      if $(cat $TMP/scan$$/install/doinst.sh | grep -q -e ' rm -rf ') ; then
+        cat $TMP/scan$$/install/doinst.sh | grep -e ' rm -rf ' > $TMP/scan$$/install/delete
+        for f in $(cat $TMP/scan$$/install/delete | cut -f 3,7 -d ' ' | tr ' ' '/'); do
+          f="/$f"
+          if [ -f "$f" -o -L "$f" ]; then
+            echo "$f"
+          fi
+        done
       fi
       if [ -d $TMP/scan$$ ]; then
         ( cd $TMP/scan$$ ; rm -rf install ) 2> /dev/null
         ( cd $TMP ; rmdir scan$$ ) 2> /dev/null
       fi
     fi
-    for f in `( $packagecompression -dc | $TAR tf - ) < $1 | grep -v 'drwx'`; do
+		for f in $( $($packagecompression -dc | $TAR tf - )) < $1 | grep -v -e 'drwx'); do
       f="/$f"
       if [ -f "$f" -o -L "$f" ]; then
         echo "$f"
@@ -308,13 +314,13 @@ if [ "$MODE" = "warn" ]; then
     shift 1
   done
   exit
-fi
+fi # if MODE = warn
 
 # Main loop:
 for package in $* ; do
 
   # Simple package integrity check:
-  if [ ! -f $package ]; then
+  if [ ! -f "${package}" ]; then
     EXITSTATUS=4
     if [ "$MODE" = "install" ]; then
       echo "Cannot install $package:  file not found"
@@ -324,13 +330,13 @@ for package in $* ; do
 
   # "shortname" isn't really THAT short...
   # it's just the full name without ".t{gz,bz,lz,xz}"
-  shortname="$(pkgbase $package)"
-  packagedir="$(dirname $package)"
+  shortname=$(pkgbase $package)
+  packagedir=$(dirname $package)
   # This is the base package name, used for grepping tagfiles and descriptions:
-  packagebase="$(package_name $shortname)"
+  packagebase=$(package_name $shortname)
 
   # Reject package if it does not end in '.t{gz,bz,lz,xz}':
-  if [ "$shortname" = "$(basename $package)" ]; then
+  if [ "$shortname" = $(basename $package) ]; then
     EXITSTATUS=3
     if [ "$MODE" = "install" ]; then
       echo "Cannot install $package:  file does not end in .tgz, .tbz, .tlz, or .txz"
@@ -339,7 +345,7 @@ for package in $* ; do
   fi
 
   # Determine extension:
-  packageext="$(echo $package | rev | cut -f 1 -d . | rev)"
+  packageext=$(printf "%s" "${package}" | rev | cut -f 1 -d '.' | rev)
 
   # Determine compressor utility:
   case $packageext in
@@ -356,9 +362,9 @@ for package in $* ; do
     packagecompression=xz
     ;;
   esac
-
+	compressiontool=$(which $packagecompression)
   # Test presence of external compression utility:
-  if ! $packagecompression --help 1> /dev/null 2> /dev/null ; then
+	if [ -z "${compressiontool}" -o ! -x "${compressiontool}" ] ; then
     EXITSTATUS=5
     if [ "$MODE" = "install" ]; then
       echo "Cannot install $package:  external compression utility $packagecompression missing"
@@ -376,13 +382,13 @@ for package in $* ; do
   if [ ! -r "$TAGFILE" ]; then
     TAGFILE=/dev/null
   fi
-  if grep "^$packagebase:" "$TAGFILE" | grep ADD > /dev/null 2> /dev/null ; then
+	if $(grep -e "^$packagebase:" "$TAGFILE" | grep -q -e 'ADD') ; then
     PRIORITY="ADD"
-  elif grep "^$packagebase:" "$TAGFILE" | grep REC > /dev/null 2> /dev/null ; then
+	elif $(grep -e "^$packagebase:" "$TAGFILE" | grep -q -e 'REC') ; then
     PRIORITY="REC"
-  elif grep "^$packagebase:" "$TAGFILE" | grep OPT > /dev/null 2> /dev/null ; then
+	elif $(grep -e "^$packagebase:" "$TAGFILE" | grep -q -e 'OPT') ; then
     PRIORITY="OPT"
-  elif grep "^$packagebase:" "$TAGFILE" | grep SKP > /dev/null 2> /dev/null ; then
+	elif $(grep -e "^$packagebase:" "$TAGFILE" | grep -q -e 'SKP') ; then
     PRIORITY="SKP"
   fi
   if [ "$PRIORITY" = "ADD" ]; then
@@ -408,9 +414,9 @@ for package in $* ; do
   COMPRESSED="$(/bin/du -sh "$(readlink -f $package)" | cut -f 1)"
   DESCRIPTION=""
   # First check for .txt file next to the package, since this is faster:
-  if grep "^$packagebase:" "$packagedir/$shortname.txt" 1> /dev/null 2> /dev/null ; then
+	if $(grep -q -e "^$packagebase:" "$packagedir/$shortname.txt") ; then
     DESCRIPTION="$packagedir/$shortname.txt"
-  elif grep "^$shortname:" "$packagedir/$shortname.txt" 1> /dev/null 2> /dev/null ; then
+	elif $(grep -q -e "^$shortname:" "$packagedir/$shortname.txt") ; then
     DESCRIPTION="$packagedir/$shortname.txt"
   fi
 
@@ -428,7 +434,7 @@ for package in $* ; do
     rm -f $TMP/tmplist$$ $TMP/tmpsize$$
     continue
   fi
-  UNCOMPRESSED="$(expr $(cat $TMP/tmpsize$$ | head -n 1 | cut -f 1 -d +) / 2)"
+  UNCOMPRESSED="$(expr $(cat $TMP/tmpsize$$ | head -n 1 | cut -f 1 -d '+') / 2)"
   if [ $UNCOMPRESSED -lt 1024 ]; then
     UNCOMPRESSED="${UNCOMPRESSED}K"
   elif [ $UNCOMPRESSED -lt 10239 ]; then
@@ -443,9 +449,9 @@ for package in $* ; do
   if [ "$DESCRIPTION" = "" ]; then
     mkdir -p $TMP/scan$$
     ( cd $TMP/scan$$ ; $packagecompression -dc | $TAR xf - install ) < $package 2> /dev/null
-    if grep "^$packagebase:" "$TMP/scan$$/install/slack-desc" 1> /dev/null 2> /dev/null ; then
+		if $(grep -q -e "^$packagebase:" "$TMP/scan$$/install/slack-desc") ; then
       DESCRIPTION="$TMP/scan$$/install/slack-desc"
-    elif grep "^$shortname:" "$TMP/scan$$/install/slack-desc" 1> /dev/null 2> /dev/null ; then
+		elif $(grep -q -e "^$shortname:" "$TMP/scan$$/install/slack-desc") ; then
       DESCRIPTION="$TMP/scan$$/install/slack-desc"
     fi
   fi
@@ -456,15 +462,15 @@ for package in $* ; do
   fi
 
   # Gather package infomation into a temporary file:
-  cat $DESCRIPTION | grep "^$packagebase:" | cut -f 2- -d : | cut -b2- 1> $TMP/tmpmsg$$ 2> /dev/null
+  cat $DESCRIPTION | grep -e "^$packagebase:" | cut -f 2- -d ':' | cut -b2- 1> $TMP/tmpmsg$$ 2> /dev/null
   if [ "$shortname" != "$packagebase" ]; then
-    cat $DESCRIPTION | grep "^$shortname:" | cut -f 2- -d : | cut -b2- 1>> $TMP/tmpmsg$$ 2> /dev/null
+    cat $DESCRIPTION | grep -e "^$shortname:" | cut -f 2- -d ':' | cut -b2- 1>> $TMP/tmpmsg$$ 2> /dev/null
   fi
   # Adjust the length here.  This allows a slack-desc to be any size up to 13 lines instead of fixed at 11.
   LENGTH=$(cat $TMP/tmpmsg$$ | wc -l)
   while [ $LENGTH -lt 12 ]; do
     echo >> $TMP/tmpmsg$$
-    LENGTH=$(expr $LENGTH + 1)
+		LENGTH=$(($LENGTH + 1))
   done
   echo "Size: Compressed: ${COMPRESSED}, uncompressed: ${UNCOMPRESSED}." >> $TMP/tmpmsg$$
   # For recent versions of dialog it is necessary to add \n to the end of each line
@@ -495,12 +501,15 @@ EOF
       echo "Installing package $(basename $package) $PMSG:"
     fi
     echo "PACKAGE DESCRIPTION:"
-    cat $DESCRIPTION | grep "^$packagebase:" | uniq | sed "s/^$packagebase:/#/g"
+    cat $DESCRIPTION | grep -e "^$packagebase:" | uniq | sed "s/^$packagebase:/#/g"
     if [ "$shortname" != "$packagebase" ]; then
-      cat $DESCRIPTION | grep "^$shortname:" | uniq | sed "s/^$shortname:/#/g"
+      cat $DESCRIPTION | grep -e "^$shortname:" | uniq | sed "s/^$shortname:/#/g"
     fi
   elif [ "$MODE" = "terse" ]; then # emit a single description line
-    printf "%-72s %-6s\n" "$(echo $shortname: $(cat $DESCRIPTION | grep "^$packagebase:" | sed "s/^$packagebase: //g" | head -n 1 | tr -d '()' | sed "s/^$packagebase //g" ) | cut -b1-72)" "[${UNCOMPRESSED}]" | cut -b1-80
+    printf "%-72s %-6s\n" "$(echo $shortname: $(cat $DESCRIPTION | \
+      grep -e "^$packagebase:" | sed -e "s/^$packagebase: //g" | head -n 1 | \
+      tr -d '()' | sed -e "s/^$packagebase //g" ) | \
+      cut -b1-72)" "[${UNCOMPRESSED}]" | cut -b1-80
   elif [ "$MODE" = "infobox" ]; then # install infobox package
     dialog --title "Installing package $shortname $PMSG" --infobox "$(cat $TMP/tmpmsg$$)" 0 0
   elif [ "$MODE" = "menu" -a "$PRIORITY" = "ADD" -a ! "$ALWAYSASK" = "yes" ]; then # ADD overrides menu mode unless -ask was used
@@ -526,7 +535,7 @@ EOF
 
   # Make sure there are no symbolic links sitting in the way of
   # incoming package files:
-  cat $TMP/tmplist$$ | grep -v "/$" | while read file ; do
+  cat $TMP/tmplist$$ | grep -v -e "/$" | while read file ; do
     if [ -L "$ROOT/$file" ]; then
       rm -f "$ROOT/$file"
     fi
@@ -543,13 +552,13 @@ EOF
     echo "PACKAGE MD5SUM: $(md5sum $package | cut -f 1 -d ' ')" >> $ADM_DIR/packages/$shortname
   fi
   echo "PACKAGE DESCRIPTION:" >> $ADM_DIR/packages/$shortname
-  cat $DESCRIPTION | grep "^$packagebase:" >> $ADM_DIR/packages/$shortname 2> /dev/null
+  cat $DESCRIPTION | grep -e "^$packagebase:" >> $ADM_DIR/packages/$shortname 2> /dev/null
   if [ "$shortname" != "$packagebase" ]; then
-    cat $DESCRIPTION | grep "^$shortname:" >> $ADM_DIR/packages/$shortname 2> /dev/null
+    cat $DESCRIPTION | grep -e "^$shortname:" >> $ADM_DIR/packages/$shortname 2> /dev/null
   fi
   echo "FILE LIST:" >> $ADM_DIR/packages/$shortname
   ( cd $ROOT/ ; $packagecompression -dc | $TAR -xlUpvf - ) < $package >> $TMP/$shortname 2> /dev/null
-  if [ "$(cat $TMP/$shortname | grep '^\./' | wc -l | tr -d ' ')" = "1" ]; then
+  if [ "$(cat $TMP/$shortname | grep -e '^\./' | wc -l | tr -d ' ')" = "1" ]; then
     # Good.  We have a package that meets the Slackware spec.
     cat $TMP/$shortname >> $ADM_DIR/packages/$shortname
   else
@@ -584,8 +593,8 @@ EOF
     rmdir $ROOT/install 1> /dev/null 2>&1
   fi
   # If we used a scan directory, get rid of it:
-  if [ -d "$TMP/scan$$" ]; then
-    rm -rf "$TMP/scan$$"
+  if [ -d $TMP/scan$$ ]; then
+    rm -rf $TMP/scan$$
   fi
   rm -f $TMP/tmpmsg$$ $TMP/reply$$
   if [ "$MODE" = "install" ]; then
