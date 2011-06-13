@@ -28,7 +28,6 @@ unset LANG LC_CTYPE LC_NUMERIC LC_TIME LC_COLLATE LC_MONETARY \
   LC_IDENTIFICATION LC_ALL
 LANG=C
 export LANG
-export PATH='/bin:/sbin:/usr/bin:/usr/sbin'
 #
 # Thu Apr 21 17:31:29 UTC 2011
 # Set LC_MESSAGES=C to avoid output parsing issues.
@@ -113,17 +112,17 @@ $TAR --help 1> /dev/null 2> /dev/null
 if [ ! $? = 0 ]; then
   TAR=tar
 fi
-#if [ ! "$(LC_MESSAGES=C $TAR --version)" = "tar (GNU tar) 1.13
-#
-#Copyright (C) 1988, 92,93,94,95,96,97,98, 1999 Free Software Foundation, Inc.
-#This is free software; see the source for copying conditions.  There is NO
-#warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-#
-#Written by John Gilmore and Jay Fenlason." ]; then
-#  echo "WARNING: pkgtools are unstable with tar > 1.13."
-#  echo "         You should provide a \"tar-1.13\" in your \$PATH."
-#  sleep 5
-#fi
+if [ ! "$(LC_MESSAGES=C $TAR --version)" = "tar (GNU tar) 1.13
+
+Copyright (C) 1988, 92,93,94,95,96,97,98, 1999 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+Written by John Gilmore and Jay Fenlason." ]; then
+  echo "WARNING: pkgtools are unstable with tar > 1.13."
+  echo "         You should provide a \"tar-1.13\" in your \$PATH."
+  sleep 5
+fi
 
 usage() {
  cat << EOF
@@ -354,7 +353,7 @@ for package in $* ; do
     packagecompression=lzma
     ;;
   'txz' )
-    packagecompression=/bin/xz
+    packagecompression=xz
     ;;
   esac
 
@@ -406,7 +405,7 @@ for package in $* ; do
 
   # Figure out some package information, like the compressed and uncompressed
   # sizes, and where to find the package description:
-  COMPRESSED="$(du -sh "$(readlink -f $package)" | cut -f 1)"
+  COMPRESSED="$(/bin/du -sh "$(readlink -f $package)" | cut -f 1)"
   DESCRIPTION=""
   # First check for .txt file next to the package, since this is faster:
   if grep "^$packagebase:" "$packagedir/$shortname.txt" 1> /dev/null 2> /dev/null ; then
