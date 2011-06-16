@@ -16,3 +16,6 @@
 
 - Autoupdates: slapt-get is an APT like system for Slackware package management. 
   by Jason  Woodward - Copyright (C) Jaos.org 2005
+
+- Autoupdates: slackpkg is a package manager for Slackware.
+  by Piter Punk
