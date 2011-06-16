@@ -1,19 +1,18 @@
-24/09/2006      17:00  Released Slack-Kickstart-10.2 v0.6b
+24/09/2006  17:00  Released Slack-Kickstart-10.2 v0.6b
 
-20/09/2006	09:50  Changed: /usr/lib/setup/setup
-			- Added:     	
-				rm -f /mnt/PkgList.txt
-    				rm -f /mnt/CHECKSUMS.md5
+20/09/2006  09:50  Changed: /usr/lib/setup/setup
+  - Added: rm -f /mnt/PkgList.txt
+  - Added: rm -f /mnt/CHECKSUMS.md5
 
-19/09/2006	16:00  Added Partition table sanity check in:
-			- /usr/lib/setup/CreatePartitions
+19/09/2006  16:00  Added Partition table sanity check in:
+  - /usr/lib/setup/CreatePartitions
 
-12/08/2006	11:00  Fixed CR in /etc/rc.d/rc.inet1
-			[ Default route message ]
+12/08/2006  11:00 Fixed CR in /etc/rc.d/rc.inet1
+  - [ Default route message ]
 
-05/08/2006	18:30  Added FireBugInfo function in 
-			- /usr/lib/setup/include/functions.inc
+05/08/2006  18:30  Added FireBugInfo function in 
+  - /usr/lib/setup/include/functions.inc
 
-05/08/2006	18:10  Fixed: /usr/lib/setup/Checklist
-			- Fixed $NTPHOST check (really!)
-			- Added 'none' option to ntp servers list.
+05/08/2006  18:10  Fixed: /usr/lib/setup/Checklist
+  - Fixed $NTPHOST check (really!)
+  - Added 'none' option to ntp servers list.
