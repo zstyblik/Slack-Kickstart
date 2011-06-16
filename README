@@ -1,17 +1,17 @@
-			#############################
-			#### Slack-Kicstart 10.2 ####
-			#############################
+      #############################
+      #### Slack-Kicstart 10.2 ####
+      #############################
 
-Author: 	Davide Zito <dave@slack-kickstart.org>
-Last revision:	24/09/2006
-Version: 	0.6b
+Author:         Davide Zito <dave@slack-kickstart.org>
+Last revision:  24/09/2006
+Version:        0.6b
 
 #################################################################
-#			WARNING!!!!				#
-#								#
-# THE AUTO INSTALLER CREATES PARTITIONS ON THE DESTINATION DISK	#
-# ERASING THE PREVIOUS CONTENTS: YOU'LL LOST ALL YOUR DATA ON	#
-# DESTINATION DISK, SO BE CAREFUL BEFORE USING THIS TOOL!!!!	#
+#                          WARNING!!!!                          #
+#                                                               #
+# THE AUTO INSTALLER CREATES PARTITIONS ON THE DESTINATION DISK #
+# ERASING THE PREVIOUS CONTENTS: YOU'LL LOST ALL YOUR DATA ON   #
+# DESTINATION DISK, SO BE CAREFUL BEFORE USING THIS TOOL!!!!    #
 #################################################################	
 
 INFO:
