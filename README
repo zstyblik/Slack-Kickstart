@@ -1,10 +1,10 @@
-      #############################
-      #### Slack-Kicstart 10.2 ####
-      #############################
+      ########################
+      #### Slack-Kicstart ####
+      ########################
 
 Author:         Davide Zito <dave@slack-kickstart.org>
-Last revision:  24/09/2006
-Version:        0.6b
+Last revision:  XX/YY/2011
+Version:        X.Y
 
 #################################################################
 #                          WARNING!!!!                          #
@@ -17,7 +17,7 @@ Version:        0.6b
 INFO:
 -----
 
-Slack-Kickstart 10.2 provides automatic installation of Slackware-10.2
+Slack-Kickstart provides automatic installation of Slackware and Slackware64 
 Linux distribution.
 
 REQUIREMENTS:
@@ -33,7 +33,7 @@ QUICKSTART:
 -----------
 
 You need to download some kernels into kernels subdir.
-You can use original Slackware-10.2 kernels, or any
+You can use original Slackware, or Slackware64, kernels, or any
 custom kernel, but if you choose the 'custom' 
 way you need built-in support for ethernet card and
 system disks device.
