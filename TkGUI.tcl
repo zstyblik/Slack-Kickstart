@@ -1,11 +1,24 @@
 #!/usr/bin/wish
+# Desc: TkGui ~ GUI interface for Slack-Kickstart
+# Copyright (C) 2006 Davide Zito
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-# TkGui by Davide Zito
-# vonatar@slack-kickstart.org
-#
-# Last Revision 24/07/2006
-#
-# Extract TZs: awk '{ if (/^#/) { next; } print $3 }' /usr/share/zoneinfo/zone.tab | sort | less
+# Extract TZs: 
+# awk '{ if (/^#/) { next; } print $3 }' \
+# /usr/share/zoneinfo/zone.tab | sort | less
 set DISTRO "Slackware-10.2"
 
 wm geometry . 590x570+150+80
