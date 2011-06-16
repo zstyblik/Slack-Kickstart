@@ -1,7 +1,7 @@
 #!/bin/bash
 # Desc: Creates an image configured by parameters - config, kernel, template
 #
-# Copyright (C) 2006 Vonatar <vonatar@slack-kickstart.org>
+# Copyright (C) 2006 Davide Zito
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

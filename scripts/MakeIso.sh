@@ -3,7 +3,7 @@
 #
 # Author: Bruno Barberi Gnecco <brunobg@users.sourceforge.net>
 # Contributors:
-# * 2006/05/25 ~ vonatar <vonatar@slack-kickstart.org>
+# * 2006/05/25 ~ Davide Zito <dave@slack-kickstart.org>
 # * 2011/06/01 ~ Zdenek Styblik <stybla@turnovfree.net>
 #
 # Copyright (C) 2011

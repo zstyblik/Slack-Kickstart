@@ -1,6 +1,6 @@
 #!/bin/bash
 # Desc: Converts tagfiles to taglist
-# Copyright (C) 2006 Slack-Kickstart
+# Copyright (C) 2006 Davide Zito
 # 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
