@@ -305,7 +305,7 @@ if [ "$MODE" = "warn" ]; then
         ( cd $TMP ; rmdir scan$$ ) 2> /dev/null
       fi
     fi
-		for f in $( $($packagecompression -dc | $TAR tf - )) < $1 | grep -v -e 'drwx'); do
+    for f in $( ($packagecompression -dc | $TAR tf - ) < $1 | grep -v -e 'drwx'); do
       f="/$f"
       if [ -f "$f" -o -L "$f" ]; then
         echo "$f"
