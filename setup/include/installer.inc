@@ -221,7 +221,8 @@ NFS_CD_Install() {
 		#		installpkg -infobox -root /mnt "/var/log/mount/slackware/${PACKAGE}"
 		printf "Installing -- '%s'" "${PACKAGE}"
 		if $(/usr/lib/setup/installpkg --root /mnt \
-			"/var/log/mount/slackware/${PACKAGE}" >>/tmp/installpkg); then
+			"/var/log/mount/slackware${LIBDIRSUFFIX}/${PACKAGE}" \
+      >>/tmp/installpkg); then
 			echo "...[OK]"
 		else
 			echo "...[FAILED]"
