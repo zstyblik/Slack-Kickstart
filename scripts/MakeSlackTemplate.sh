@@ -661,6 +661,7 @@ if [ -e "/usr/share/zoneinfo/${TIMEZONE}" ]; then
 	echo "Configuring TZ settings"
 	cat "/usr/share/zoneinfo/${TIMEZONE}" > "${INITRDMOUNT}/etc/localtime"
 fi
+chmod +x ${INITRDMOUNT}/etc/rc.d/rc.*
 #### passwords
 pushd "${INITRDMOUNT}"
 cp etc/passwd etc/passwd.org
