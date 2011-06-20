@@ -89,7 +89,8 @@ NFS_Mount() {
 	#
 	# Mounts NFS PKG Repository
 	#
-	mount -o ro,rsize=8192 ${NFS_SERVER}:${NFS_DIR} /var/log/mount > $REDIR 2>&1
+	mount -o ro,rsize=8192,nolock ${NFS_SERVER}:${NFS_DIR} /var/log/mount \
+		> $REDIR 2>&1
 
 	if [ $? != 0 ];then
 		echo "[FAILED]"
