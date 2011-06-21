@@ -36,6 +36,8 @@ RDSIZE=${RDSIZE:-65536}
 BLKSIZE=1024
 
 SCRIPTNAME=$(basename "${0}")
+PREFIX="$(dirname "${SCRIPTNAME}")"
+
 rm -f "${TMPDIR}/${SCRIPTNAME}.stderr.log"
 touch "${TMPDIR}/${SCRIPTNAME}.stderr.log"
 exec 2>"${TMPDIR}/${SCRIPTNAME}.stderr.log"
