@@ -151,6 +151,7 @@ show_help()
 } # show_help
 
 ### MAIN ###
+CWD=${PWD}
 KSCONFIG=${1:-''}
 if [ -z "${KSCONFIG}" ]; then
 	show_help
@@ -664,6 +665,14 @@ if [ -e "/usr/share/zoneinfo/${TIMEZONE}" ]; then
 	cat "/usr/share/zoneinfo/${TIMEZONE}" > "${INITRDMOUNT}/etc/localtime"
 fi
 chmod +x ${INITRDMOUNT}/etc/rc.d/rc.*
+# SSH keys
+if [ -e "${CWD}/config-files/authorized_keys" ]; then
+	printf "Getting SSH keys\n"
+	mkdir -p "${INITRDMOUNT}/root/.ssh/"
+	mkdir -p "${INITRDMOUNT}/etc/dropbear/"
+	cp "${CWD}/config-files/authorized_keys" "${INITRDMOUNT}/etc/dropbear/"
+fi
+
 #### passwords
 pushd "${INITRDMOUNT}"
 cp etc/passwd etc/passwd.org
