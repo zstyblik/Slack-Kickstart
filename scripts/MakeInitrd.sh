@@ -168,6 +168,16 @@ else
 	printf "# END of Taglist: %s" $TAG >> mount/etc/Kickstart.cfg
 	printf "\t\t[ OK ]\n"
 fi
+# SSH keys
+printf "Getting SSH keys..."
+if [ -e "config-files/authorized_keys" ]; then
+	mkdir -p "${INITRDMOUNT}/root/.ssh/"
+	mkdir -p "${INITRDMOUNT}/etc/dropbear/"
+	cp "config-files/authorized_keys" "${INITRDMOUNT}/etc/dropbear/"
+	printf "\t\t[ OK ]\n"
+else
+	printf "\t\t[ FAIL ]\n"
+fi
 #--------------------------------------
 # Timezone setting
 #--------------------------------------
