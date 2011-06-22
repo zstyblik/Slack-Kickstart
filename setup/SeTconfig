@@ -36,6 +36,18 @@ echo "[INFO] Setting root's password"
 sed -e "s@root::@root:${PASSWD}:@g" /mnt/etc/shadow > /mnt/etc/shadow2
 cp /mnt/etc/shadow2 /mnt/etc/shadow
 chmod 600 /mnt/etc/shadow
+#################
+# Copy SSH keys #
+#################
+printf "[INFO] Copying SSH keys..."
+if [ -e /etc/dropbear/authorized_keys ]; then
+	mkdir -p /mnt/root/.ssh || true
+	chmod go-rwx '/mnt/root/.ssh'
+	cp /etc/dropbear/authorized_keys /mnt/root/.ssh
+	pritnf "[ OK ]\n"
+else
+	printf "[ SKP ]\n"
+fi
 ##################
 # Timezone Setup #
 ##################
