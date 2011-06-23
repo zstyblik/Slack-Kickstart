@@ -671,6 +671,8 @@ if [ -e "${CWD}/config-files/authorized_keys" ]; then
 	mkdir -p "${INITRDMOUNT}/root/.ssh/"
 	mkdir -p "${INITRDMOUNT}/etc/dropbear/"
 	cp "${CWD}/config-files/authorized_keys" "${INITRDMOUNT}/etc/dropbear/"
+	cp "${CWD}/config-files/authorized_keys" "${INITRDMOUNT}/root/.ssh/"
+	chmod 400 "${INITRDMOUNT}/root/.ssh/" "${INITRDMOUNT}/etc/dropbear/"
 fi
 
 #### passwords

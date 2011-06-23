@@ -174,6 +174,8 @@ if [ -e "config-files/authorized_keys" ]; then
 	mkdir -p "${INITRDMOUNT}/root/.ssh/"
 	mkdir -p "${INITRDMOUNT}/etc/dropbear/"
 	cp "config-files/authorized_keys" "${INITRDMOUNT}/etc/dropbear/"
+	cp "config-files/authorized_keys" "${INITRDMOUNT}/root/.ssh/"
+	chmod 400 "${INITRDMOUNT}/root/.ssh/" "${INITRDMOUNT}/etc/dropbear/"
 	printf "\t\t[ OK ]\n"
 else
 	printf "\t\t[ FAIL ]\n"
