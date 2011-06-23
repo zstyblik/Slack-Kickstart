@@ -44,6 +44,7 @@ if [ -e /etc/dropbear/authorized_keys ]; then
 	mkdir -p /mnt/root/.ssh || true
 	chmod go-rwx '/mnt/root/.ssh'
 	cp /etc/dropbear/authorized_keys /mnt/root/.ssh
+	chmod 600 /mnt/root/.ssh/authorized_keys
 	printf "[ OK ]\n"
 else
 	printf "[ SKP ]\n"
