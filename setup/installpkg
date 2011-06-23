@@ -168,7 +168,7 @@ package_name() {
   else # has more than one dash delimited segment
     # Count number of segments:
     INDEX=1
-    while [ ! $(printf "%s" "${STRING}" | cut -f ${INDEX} -d '-') = "" ]; do
+    while [ ! -z $(printf "%s" "${STRING}" | cut -f ${INDEX} -d '-') ]; do
       INDEX=$(($INDEX + 1))
     done
     INDEX=$(($INDEX - 1)) # don't include the null value
