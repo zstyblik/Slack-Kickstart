@@ -411,7 +411,8 @@ for package in $* ; do
 
   # Figure out some package information, like the compressed and uncompressed
   # sizes, and where to find the package description:
-  COMPRESSED="$(/bin/du -sh "$(readlink -f $package)" | cut -f 1)"
+  du=$(which du)
+  COMPRESSED="$(${du} -sh "$(readlink -f $package)" | cut -f 1)"
   DESCRIPTION=""
   # First check for .txt file next to the package, since this is faster:
 	if $(grep -q -e "^$packagebase:" "$packagedir/$shortname.txt") ; then
