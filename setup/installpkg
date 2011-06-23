@@ -415,11 +415,13 @@ for package in $* ; do
   COMPRESSED="$(${du} -sh "$(readlink -f $package)" | cut -f 1)"
   DESCRIPTION=""
   # First check for .txt file next to the package, since this is faster:
-	if $(grep -q -e "^$packagebase:" "$packagedir/$shortname.txt") ; then
-    DESCRIPTION="$packagedir/$shortname.txt"
-	elif $(grep -q -e "^$shortname:" "$packagedir/$shortname.txt") ; then
-    DESCRIPTION="$packagedir/$shortname.txt"
-  fi
+	if [ -e "$packagedir/$shortname.txt" ]; then
+		if $(grep -q -e "^$packagebase:" "$packagedir/$shortname.txt") ; then
+	    DESCRIPTION="$packagedir/$shortname.txt"
+		elif $(grep -q -e "^$shortname:" "$packagedir/$shortname.txt") ; then
+	    DESCRIPTION="$packagedir/$shortname.txt"
+  	fi
+	fi
 
   # Test tarball integrity and get uncompressed package size:
   if [ "$MODE" = "install" ]; then
