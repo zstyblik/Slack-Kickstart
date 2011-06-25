@@ -109,7 +109,7 @@ MD5SUM=0
 # So that we know what to expect...
 umask 022
 TAR='tar-1.13'
-if ! $($TAR --help 1> /dev/null 2> /dev/null) ; then
+if ! $TAR --help 1> /dev/null 2> /dev/null ; then
   TAR=tar
 fi
 if [ ! "$(LC_MESSAGES=C $TAR --version)" = "tar (GNU tar) 1.13
@@ -291,7 +291,7 @@ if [ "$MODE" = "warn" ]; then
     esac
     ( cd $TMP/scan$$ ; $packagecompression -dc | $TAR xf - install ) < $1 2> /dev/null 
     if [ -r $TMP/scan$$/install/doinst.sh ]; then
-      if $(cat $TMP/scan$$/install/doinst.sh | grep -q -e ' rm -rf ') ; then
+      if cat $TMP/scan$$/install/doinst.sh | grep -q -e ' rm -rf ' ; then
         cat $TMP/scan$$/install/doinst.sh | grep -e ' rm -rf ' > $TMP/scan$$/install/delete
         for f in $(cat $TMP/scan$$/install/delete | cut -f 3,7 -d ' ' | tr ' ' '/'); do
           f="/$f"
@@ -382,13 +382,13 @@ for package in $* ; do
   if [ ! -r "$TAGFILE" ]; then
     TAGFILE=/dev/null
   fi
-	if $(grep -e "^$packagebase:" "$TAGFILE" | grep -q -e 'ADD') ; then
+	if grep -e "^$packagebase:" "$TAGFILE" | grep -q -e 'ADD' ; then
     PRIORITY="ADD"
-	elif $(grep -e "^$packagebase:" "$TAGFILE" | grep -q -e 'REC') ; then
+	elif grep -e "^$packagebase:" "$TAGFILE" | grep -q -e 'REC' ; then
     PRIORITY="REC"
-	elif $(grep -e "^$packagebase:" "$TAGFILE" | grep -q -e 'OPT') ; then
+	elif grep -e "^$packagebase:" "$TAGFILE" | grep -q -e 'OPT' ; then
     PRIORITY="OPT"
-	elif $(grep -e "^$packagebase:" "$TAGFILE" | grep -q -e 'SKP') ; then
+	elif grep -e "^$packagebase:" "$TAGFILE" | grep -q -e 'SKP' ; then
     PRIORITY="SKP"
   fi
   if [ "$PRIORITY" = "ADD" ]; then
@@ -415,13 +415,13 @@ for package in $* ; do
   COMPRESSED="$(${du} -sh "$(readlink -f $package)" | cut -f 1)"
   DESCRIPTION=""
   # First check for .txt file next to the package, since this is faster:
-	if [ -e "$packagedir/$shortname.txt" ]; then
-		if $(grep -q -e "^$packagebase:" "$packagedir/$shortname.txt") ; then
-	    DESCRIPTION="$packagedir/$shortname.txt"
-		elif $(grep -q -e "^$shortname:" "$packagedir/$shortname.txt") ; then
-	    DESCRIPTION="$packagedir/$shortname.txt"
-  	fi
-	fi
+  if [ -e "$packagedir/$shortname.txt" ]; then
+    if grep -q -e "^$packagebase:" "$packagedir/$shortname.txt" ; then
+      DESCRIPTION="$packagedir/$shortname.txt"
+    elif grep -q -e "^$shortname:" "$packagedir/$shortname.txt" ; then
+      DESCRIPTION="$packagedir/$shortname.txt"
+    fi
+  fi
 
   # Test tarball integrity and get uncompressed package size:
   if [ "$MODE" = "install" ]; then
@@ -452,9 +452,9 @@ for package in $* ; do
   if [ "$DESCRIPTION" = "" ]; then
     mkdir -p $TMP/scan$$
     ( cd $TMP/scan$$ ; $packagecompression -dc | $TAR xf - install ) < $package 2> /dev/null
-		if $(grep -q -e "^$packagebase:" "$TMP/scan$$/install/slack-desc") ; then
+    if grep -q -e "^$packagebase:" "$TMP/scan$$/install/slack-desc" ; then
       DESCRIPTION="$TMP/scan$$/install/slack-desc"
-		elif $(grep -q -e "^$shortname:" "$TMP/scan$$/install/slack-desc") ; then
+    if grep -q -e "^$shortname:" "$TMP/scan$$/install/slack-desc" ; then
       DESCRIPTION="$TMP/scan$$/install/slack-desc"
     fi
   fi
