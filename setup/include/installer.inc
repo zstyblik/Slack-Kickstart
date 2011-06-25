@@ -160,8 +160,8 @@ HTTP_FTP_Install() {
 		#\n\
 		#" 10 60
 		printf "Downloading package -- '%s'" "${PACKAGE}"
-		if $(wget "${PACKAGE_SERVER}/slackware${LIBDIRSUFFIX}/${PACKAGE}" \
-			2> ${REDIR}) ; then
+		if wget "${PACKAGE_SERVER}/slackware${LIBDIRSUFFIX}/${PACKAGE}" \
+			2> ${REDIR} ; then
 			echo "...[OK]"
 		else
 			echo "...[FAILED]"
@@ -184,8 +184,8 @@ HTTP_FTP_Install() {
 
 		#		installpkg -infobox -root /mnt "/var/log/mount/slackware/${PACKAGE}"
 		printf "Installing -- '%s'" "${PACKAGE}"
-		if $(/usr/lib/setup/installpkg --root /mnt \
-			"/var/log/mount/slackware/${PACKAGE}" >>/tmp/installpkg) ; then
+		if /usr/lib/setup/installpkg --root /mnt \
+			"/var/log/mount/slackware/${PACKAGE}" >>/tmp/installpkg ; then
 			echo "...[OK]"
 		else
 			echo "...[FAILED]"
@@ -220,9 +220,9 @@ NFS_CD_Install() {
 		#
 		#		installpkg -infobox -root /mnt "/var/log/mount/slackware/${PACKAGE}"
 		printf "Installing -- '%s'" "${PACKAGE}"
-		if $(/usr/lib/setup/installpkg --root /mnt \
+		if /usr/lib/setup/installpkg --root /mnt \
 			"/var/log/mount/slackware${LIBDIRSUFFIX}/${PACKAGE}" \
-      >>/tmp/installpkg); then
+      >>/tmp/installpkg; then
 			echo "...[OK]"
 		else
 			echo "...[FAILED]"
