@@ -27,7 +27,7 @@
 # qwerty/it.map
 # we need only the 'x.map' part
 #
-KMAP=$(echo "${KEYMAP}" | cut -d "/" -f 2)
+KMAP=$(printf "%s" "${KEYMAP}" | cut -d "/" -f 2)
 
 ######################
 # Sets root password #
