@@ -130,7 +130,7 @@ gunzip "${HOST}.gz" \
 sleep 2
 # Mounting root image in loopback on mount directory
 printf "Mounting initrd image..."
-if $(mount -o loop "${HOST}" mount > /dev/null 2>&1) ; then
+if mount -o loop "${HOST}" mount > /dev/null 2>&1 ; then
 	printf "\t[ OK ]\n"
 else
 	rm "${HOST}"
