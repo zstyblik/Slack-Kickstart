@@ -35,7 +35,7 @@ cd /mnt/usr/Download
 echo "Package updates from slapt-get"
 echo "Downloading slapt-get from\n\n http://software.jaos.org "
 
-if ! $(wget "${SLAPTGET}" 1 > ${REDIR} 2>&1) ; then
+if ! wget "${SLAPTGET}" 1 > ${REDIR} 2>&1 ; then
 	echo "ERROR downloading slapt-get - Skipping Autoupdates!" | \
 		tee /mnt/var/log/slapt-get.log
 	touch /tmp/Kickstart.END
