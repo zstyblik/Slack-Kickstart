@@ -43,7 +43,7 @@ echo
 # if false, we need to load kernel
 # modules hoping to find the right one.
 #
-if [ ${ETH} ] && ! $(ip link show dev "${ETH}" > /dev/null 2>&1) ; then
+if [ ${ETH} ] && ! ip link show dev "${ETH}" > /dev/null 2>&1 ; then
 #
 # No ethernet card support in Kernel.
 # 
@@ -59,7 +59,7 @@ if [ ${ETH} ] && ! $(ip link show dev "${ETH}" > /dev/null 2>&1) ; then
 		hp-plus hp lne390 ne3210 ni5010 ni52 ni65 sb1000 sealevel smc-ultra \
 		sis900 smc-ultra32 smc9194 wd virtio_net; do
 		modprobe "${CARD}" > /dev/null 2>&1
-		if $(ip link show dev "${ETH}" > /dev/null 2>&1 ) ; then
+		if ip link show dev "${ETH}" > /dev/null 2>&1 ; then
 			echo "Found: $CARD card."
 			echo "/sbin/modprobe $CARD" > /tmp/Modules.info
 			break
@@ -106,7 +106,7 @@ if [ ! -e /tmp/NONET ]; then
 #
 	if [ -e /tmp/NETWORK_UP -a "${NTPHOST}" != "none" ]; then
 		printf "Syncing clock with $NTPHOST ..... " 
-		if $(/usr/sbin/ntpdate "${NTPHOST}" > /dev/null 2>&1) ; then
+		if /usr/sbin/ntpdate "${NTPHOST}" > /dev/null 2>&1 ; then
 			echo "[OK]"
 			printf "Saving date on hardware clock ....." && \
 				/usr/sbin/hwclock --${HWCLOCK} --systohc > /dev/null 2>&1 && echo "[OK]" 
@@ -123,7 +123,7 @@ fi # if ! -e /tmp/NET
 # 
 DEV=$(basename "${BOOTDEV}")
 printf "Checking if '${DEVICE}' is supported ... "
-if ! $(cat /proc/partitions | grep -e "${DEV}" > /dev/null 2>&1) ; then
+if ! cat /proc/partitions | grep -e "${DEV}" > /dev/null 2>&1 ; then
 	# fatal error
 	touch /tmp/CHECKLIST_FAILED
 	printf "[FAILED]\n\n\n"
