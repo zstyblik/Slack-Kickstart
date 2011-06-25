@@ -41,7 +41,7 @@ echo "Packages updated by swaret - downloading from SF.net"
 # TODO ~ unhardcode
 LINK='http://ovh.dl.sourceforge.net/sourceforge/swaret/swaret-1.6.2-noarch-1.tgz.tar'
 
-if ! $(wget "${LINK}") ; then
+if ! wget "${LINK}" ; then
 	echo "ERROR downloading swaret - Skipping Autoupdates!" | tee /var/log/swaret 
 	touch /tmp/Kickstart.END
 	exit 0
