@@ -36,7 +36,7 @@ RDSIZE=${RDSIZE:-65536}
 
 if [ ! -d "${WORKDIR}/Kickstart/tmp" ]; then
 	printf "Creating workdir '${WORKDIR}'..."
-	if $(mkdir -p "${WORKDIR}/Kickstart/tmp" > /dev/null 2>&1) ; then
+	if mkdir -p "${WORKDIR}/Kickstart/tmp" > /dev/null 2>&1 ; then
 		printf "\t[ OK ]\n"
 	else
 		printf "\t[ FAIL ]\n"
@@ -97,7 +97,7 @@ if [ ! -e "${INITRDIMG}" ]; then
 	exit 1
 fi
 
-if $(file "${INITRDIMG}" | grep -q -e "gzip compressed data") ; then
+if file "${INITRDIMG}" | grep -q -e "gzip compressed data" ; then
 	# OK
 	true
 else
@@ -113,9 +113,9 @@ if [ ! -e "${KERNEL}" ]; then
 	echo
 	exit 1
 fi
-if $(file "${KERNEL}" | \
+if file "${KERNEL}" | \
 	awk "{ if (/Linux/ && /kernel/ && /x86/) print \$1; }" | \
-	grep -q -E -e '^.+$') ; then
+	grep -q -E -e '^.+$' ; then
 	# dummy
 	true
 else
