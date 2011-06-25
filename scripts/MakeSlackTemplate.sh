@@ -68,7 +68,7 @@ getlibs()
 	for LIBLINE in $(ldd "${BINARY}" | tr ' ' '#'); do
 		echo "${LIBLINE}" | grep -q -e 'linux-vdso' && continue;
 		echo "${LIBLINE}" | grep -q -e 'linux-gate' && continue;
-		if $(echo "${LIBLINE}" | awk -F'#' '{ print $1 }' | grep -q -e '^/') ; then
+		if printf "${LIBLINE}" | awk -F'#' '{ print $1 }' | grep -q -e '^/' ; then
 			LIBTOCOPY=$(echo "${LIBLINE}" | awk -F'#' '{ print $1 }');
 			LIBDIR=$(dirname "${LIBTOCOPY}")
 			if [ -z "${LIBTOCOPY}" ]; then
@@ -81,7 +81,7 @@ getlibs()
 			if [ ! -d "${INITRDMOUNT}/${LIBDIR}" ]; then
 				mkdir -p "${INITRDMOUNT}/${LIBDIR}"
 			fi
-			if $(file "${LIBTOCOPY}" | grep -q -e 'symbolic link') ; then
+			if file "${LIBTOCOPY}" | grep -q -e 'symbolic link' ; then
 				LIBREAL=$(file "${LIBTOCOPY}" | cut -d '`' -f 2 | tr -d "'")
 				cp -apr "${LIBDIR}/${LIBREAL}" "${INITRDMOUNT}/${LIBDIR}"
 				pushd "${INITRDMOUNT}/${LIBDIR}"
@@ -93,7 +93,7 @@ getlibs()
 			fi
 			continue
 		fi
-		if $(echo "${LIBLINE}" | grep -q -e '=>') ; then
+		if printf "${LIBLINE}" | grep -q -e '=>' ; then
 			LIBPOINTER=$(echo "${LIBLINE}" | awk -F'#' '{ print $3 }')
 			LIBREAL=$(file "${LIBPOINTER}" | cut -d '`' -f 2 | tr -d "'")
 			LIBDIR=$(dirname "${LIBPOINTER}")
@@ -177,7 +177,7 @@ if [ ! -e "${BZIMG}" ]; then
 fi
 
 # Housekeeping...
-if $(mount | grep -q -e "${INITRDMOUNT}") ; then
+if mount | grep -q -e "${INITRDMOUNT}" ; then
 	echo "Initrd dir '${INITRDMOUNT}' already mounted."
 	exit 1
 fi
