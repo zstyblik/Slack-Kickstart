@@ -18,7 +18,7 @@
 #
 # Creates device nodes
 # Note: makedev command seems to be gone
-if ! $(ps aux | grep -e 'udevd' | grep -q -v -e 'grep'); then
+if ! ps aux | grep -e 'udevd' | grep -q -v -e 'grep' ; then
 	/usr/sbin/makedevs.sh > ${REDIR} 2>&1
 fi
 #
@@ -35,7 +35,7 @@ cat /tmp/SFDiskPartitionsList | \
 # Test Partitions
 #
 # TODO ~ this won't pass % set -e; -> stuff it into if $(cmd) ; then ???
-if ! $(sfdisk -V ${BOOTDEV} > ${REDIR} 2>&1) ; then
+if ! sfdisk -V ${BOOTDEV} > ${REDIR} 2>&1 ; then
 	echo
 	echo "FATAL ERROR on partitions table - Aborting"
 	echo "HINT: Check tty4 for errors."
@@ -56,7 +56,7 @@ echo ",,,*" | sfdisk --force ${BOOTDEV} -N1 > ${REDIR} 2>&1
 # Device creation: now we need to create
 # dev nodes for the new partitions
 # Note: makedev command seems to be gone.
-if ! $(ps aux | grep -e 'udevd' | grep -q -v -e 'grep'); then
+if ! ps aux | grep -e 'udevd' | grep -q -v -e 'grep'; then
 	/usr/sbin/makedevs.sh > ${REDIR} 2>&1
 fi
 echo "[OK]"
