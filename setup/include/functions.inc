@@ -73,7 +73,7 @@ Extract_Info() {
 				else
 					echo "${COUNTER} ${CHAR}"
 				fi
-        ;;
+				;;
 			'2')
 				if [ "$CHAR" = "empty" ] || [ "$CHAR" = "extended" ]; then
 					CHAR=""
