@@ -19,6 +19,9 @@
 # Missing features/TODO:
 # * chown root:root instead of stybla
 # * more than one HDD, mdadm, LVM ?
+# * postinst scripts
+# * sysctl.conf
+# * slackpkg
 set -e
 set -u
 
