@@ -255,7 +255,7 @@ for CMD in $(./bin/busybox --list-ful); do
 	ln -s /bin/busybox "./${CMD}"
 done
 mkdir -p etc/udhcpc
-cp "${TMPDIR}/busybox-${BUSYBOXVER}/examples/udhcp/simple.script" \
+cp "${IMAGEFSDIR}/etc/udhcp/simple.script" \
 	etc/udhcpc/default.script
 chmod +x etc/udhcpc/default.script
 # clean up ~ it's hard to say where this came from
