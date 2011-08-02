@@ -50,10 +50,10 @@ case "$1" in
 		[ -n "$hostname" ] && HOSTNAME="$hostname"
 		[ -n "$domain" ] && HOSTNAME="${HOSTNAME}.$domain"
 		if [ -n "$HOSTNAME" ]; then
-			printf "%s" ${HOSTNAME} > /etc/HOSTNAME
+			printf "%s\n" ${HOSTNAME} > /etc/HOSTNAME
 			hostname -F /etc/HOSTNAME
 		fi # [ -n $HOSTNAME ]
-		[ -n "$ntpsrv" ] && printf "%s" $ntpsrv > /tmp/ntpsrv
+		[ -n "$ntpsrv" ] && printf "%s\n" $ntpsrv > /tmp/ntpsrv
 		;;
 esac
 
