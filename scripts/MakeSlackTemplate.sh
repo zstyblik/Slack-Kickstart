@@ -254,10 +254,6 @@ for CMD in $(./bin/busybox --list-ful); do
 	fi
 	ln -s /bin/busybox "./${CMD}"
 done
-mkdir -p etc/udhcpc
-cp "${IMAGEFSDIR}/etc/udhcp/simple.script" \
-	etc/udhcpc/default.script
-chmod +x etc/udhcpc/default.script
 # clean up ~ it's hard to say where this came from
 rm -f sbin/bin
 popd
@@ -273,7 +269,11 @@ cp -adpR /dev/mem "${INITRDMOUNT}/dev"
 cp -adpR /dev/null "${INITRDMOUNT}/dev"
 mkdir "${INITRDMOUNT}/dev/pts"
 mkdir "${INITRDMOUNT}/dev/shm"
-
+# udhcpc
+mkdir -p "${INITRDMOUNT}/etc/udhcpc" || true
+cp "${IMAGEFSDIR}/etc/udhcpc/default.script" \
+	${INITRDMOUNT}/etc/udhcpc/default.script
+chmod +x ${INITRDMOUNT}/etc/udhcpc/default.script
 #### Kernel modules
 # TODO: megaTodo - which modules, how-to determine version etc.
 # A: external file as a list of modules to copy including "paths"
