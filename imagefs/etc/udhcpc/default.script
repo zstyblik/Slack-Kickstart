@@ -1,46 +1,59 @@
 #!/bin/sh
 # udhcpc script edited by Tim Riker <Tim@Rikers.org>
-
+# extended by Zdenek Styblik <zdenek.styblik@gmail.com>
 RESOLV_CONF="/etc/resolv.conf"
 
 [ -n "$1" ] || { echo "Error: should be called from udhcpc"; exit 1; }
 
-NETMASK=""
-[ -n "$subnet" ] && NETMASK="netmask $subnet"
-BROADCAST="broadcast +"
+#NETMASK=""
+#[ -n "$subnet" ] && NETMASK="netmask $subnet"
+#BROADCAST="broadcast +"
+IPADDR=$ip
+[ -n "$subnet" ] && IPADDR="$IPADDR/$subnet"
+BROADCAST=""
 [ -n "$broadcast" ] && BROADCAST="broadcast $broadcast"
 
 case "$1" in
 	deconfig)
-		echo "Setting IP address 0.0.0.0 on $interface"
-		ifconfig $interface 0.0.0.0
+		echo "Flushing IP addresses on interface $interface"
+		ip address flush dev $interface
 		;;
 
 	renew|bound)
 		echo "Setting IP address $ip on $interface"
-		ifconfig $interface $ip $NETMASK $BROADCAST
+		ip address add ${IPADDR} ${BROADCAST} dev $interface
 
 		if [ -n "$router" ] ; then
 			echo "Deleting routers"
-			while route del default gw 0.0.0.0 dev $interface ; do
+			while ip route del default dev $interface ; do
 				:
 			done
 
 			metric=0
 			for i in $router ; do
 				echo "Adding router $i"
-				route add default gw $i dev $interface metric $((metric++))
+				ip route add default via $i dev $interface metric $((metric++))
 			done
 		fi
 
 		echo "Recreating $RESOLV_CONF"
-		echo -n > $RESOLV_CONF-$$
+		cat /dev/null > $RESOLV_CONF-$$
 		[ -n "$domain" ] && echo "search $domain" >> $RESOLV_CONF-$$
 		for i in $dns ; do
 			echo " Adding DNS server $i"
 			echo "nameserver $i" >> $RESOLV_CONF-$$
 		done
 		mv $RESOLV_CONF-$$ $RESOLV_CONF
+		[ -n "$rootpath" ] && printf "%s\n" $rootpath > /tmp/rootpath
+		[ -n "$sname" ] && printf "%s\n" $sname > /tmp/sname
+		HOSTNAME=""
+		[ -n "$hostname" ] && HOSTNAME="$hostname"
+		[ -n "$domain" ] && HOSTNAME="${HOSTNAME}.$domain"
+		if [ -n "$HOSTNAME" ]; then
+			printf "%s" ${HOSTNAME} > /etc/HOSTNAME
+			hostname -F /etc/HOSTNAME
+		fi # [ -n $HOSTNAME ]
+		[ -n "$ntpsrv" ] && printf "%s" $ntpsrv > /tmp/ntpsrv
 		;;
 esac
 
