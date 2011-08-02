@@ -656,10 +656,19 @@ if [ ! -z "${COREUTIPKG}" ]; then
 	cd "${TMPDIR}/slack-coreutils"
 	explodepkg "${COREUTIPKG}" 1>/dev/null
 	cp "${TMPDIR}/slack-coreutils/bin/paste" "${INITRDMOUNT}/bin/paste"
-	cp "${TMPDIR}/slack-tar/bin/tar-1.13" "${INITRDMOUNT}/bin/"
 	cd "${TMPDIR}"
 	rm -rf "${TMPDIR}/slack-coreutils"
 fi # if $COREUTILS
+#### tar
+TARPKG=$(parse_package 'tar-')
+if [ ! -z "${TARPKG}" ]; then
+	mkdir "${TMPDIR}/slack-tar"
+	cd "${TMPDIR}/slack-tar"
+	explodepkg "${TARPKG}" 1>/dev/null
+	cp "${TMPDIR}/slack-tar/bin/tar-1.13" "${INITRDMOUNT}/bin/"
+	cd "${TMPDIR}"
+	rm -rf "${TMPDIR}/slack-tar"
+fi
 #### Finish up...
 cp -pr ${CWD}/${IMAGEFSDIR}/* "${INITRDMOUNT}/"
 if [ -e "/usr/share/zoneinfo/${TIMEZONE}" ]; then
