@@ -454,7 +454,7 @@ for package in $* ; do
     ( cd $TMP/scan$$ ; $packagecompression -dc | $TAR xf - install ) < $package 2> /dev/null
     if grep -q -e "^$packagebase:" "$TMP/scan$$/install/slack-desc" ; then
       DESCRIPTION="$TMP/scan$$/install/slack-desc"
-    if grep -q -e "^$shortname:" "$TMP/scan$$/install/slack-desc" ; then
+    elif grep -q -e "^$shortname:" "$TMP/scan$$/install/slack-desc" ; then
       DESCRIPTION="$TMP/scan$$/install/slack-desc"
     fi
   fi
