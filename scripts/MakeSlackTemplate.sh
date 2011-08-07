@@ -709,8 +709,7 @@ if [ -n "${POSTINST}" ]; then
 		fi # if ! -e
 		cp ${CWD}/post-install/${POSTSCRIPT} ${INITRDMOUNT}/etc/post-install/
 	done # for POSTSCRIPT
-	IFS="
-"
+	IFS=""
 fi # if -n POSTINST
 #
 df -h "${INITRDMOUNT}"
