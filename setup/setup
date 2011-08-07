@@ -106,6 +106,22 @@ if [ -e /tmp/Kickstart.END ]; then
 		chroot /mnt /postinstall.sh
 		rm /mnt/postinstall.sh
 	fi
+	if [ -n "${POSTINST}" ]; then
+		IFS=","
+		for POSTSCRIPT in ${POSTINST}; do
+			if [ ! -e "/etc/post-install/${POSTSCRIPT}" ]; then
+				printf "Post-install script '%s' doesn't seem to exist." \
+					${POSTSCRIPT}
+				continue
+			fi # if ! -e ...
+			cp -ap /etc/post-install/${POSTSCRIPT} /mnt
+			chmod +x /mnt/${POSTSCRIPT}
+			chroot /mnt ${POSTSCRIPT} || true
+			rm -f /mnt/${POSTSCRIPT}
+		done # for POSTSCRIPT
+		IFS=""
+		rm -rf /mnt/etc/post-install
+	fi # if -n POSTSCRIPT
 	#
 	# Installation ends!
 	#
