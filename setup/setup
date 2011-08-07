@@ -132,7 +132,7 @@ if [ -e /tmp/Kickstart.END ]; then
 	# Ejects CD-Rom before reboot
 	#
 	if [ -s /tmp/CDROM ] && [ -x /bin/eject ]; then
-		/bin/eject `cat /tmp/CDROM`
+		/bin/eject $(cat /tmp/CDROM)
 	fi
 	#
 	# If AUTOSTART=yes umounts all partitions
