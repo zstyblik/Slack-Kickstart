@@ -57,12 +57,20 @@ fi
 # Creates lilo.conf
 #------------------------------------------
 # image = /boot/${KNAME}
-cat << EOF > /mnt/etc/lilo.conf
+cat << EOF1 > /mnt/etc/lilo.conf
 # LILO configuration file
 # 
 #
 # Start LILO global section
 boot = ${BOOTDEV}
+EOF1
+# FIX/Workaround to boot from VirtIO disks
+if printf "%s" "${BOOTDEV}" | grep -q -E -e '/dev/vd[a-z]+' ; then
+	printf "disk=${BOOTDEV} bios=0x80 max-partitions=7\n" >> /mnt/etc/lilo.conf
+	cp -apr ${BOOTDEV}* /mnt/dev/
+fi
+
+cat << EOF2 >> /mnt/etc/lilo.conf
 lba32
 #compact        # faster, but won't work on all systems.
 prompt
@@ -82,7 +90,7 @@ image = /boot/vmlinuz
 # Insert other images here
 
 # Linux bootable partition config ends
-EOF
+EOF2
 #-----------------------------------------
 #
 # Installs lilo
