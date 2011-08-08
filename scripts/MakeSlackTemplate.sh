@@ -663,6 +663,7 @@ fi # if $COREUTILS
 #### tar
 TARPKG=$(parse_package 'tar-')
 if [ ! -z "${TARPKG}" ]; then
+	rm -rf "${TMPDIR}/slack-tar"
 	mkdir "${TMPDIR}/slack-tar"
 	cd "${TMPDIR}/slack-tar"
 	explodepkg "${TARPKG}" 1>/dev/null
