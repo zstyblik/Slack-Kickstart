@@ -666,6 +666,7 @@ if [ ! -z "${TARPKG}" ]; then
 	mkdir "${TMPDIR}/slack-tar"
 	cd "${TMPDIR}/slack-tar"
 	explodepkg "${TARPKG}" 1>/dev/null
+	echo "Installing 'tar-1.13'"
 	cp "${TMPDIR}/slack-tar/bin/tar-1.13" "${INITRDMOUNT}/bin/"
 	cd "${TMPDIR}"
 	rm -rf "${TMPDIR}/slack-tar"
