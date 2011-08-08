@@ -670,6 +670,21 @@ if [ ! -z "${TARPKG}" ]; then
 	cd "${TMPDIR}"
 	rm -rf "${TMPDIR}/slack-tar"
 fi
+#### ntp
+NTPPKG=$(parse_package 'ntp-')
+if [ ! -z "${NTPPKG}" ]; then
+	rm -rf "${TMPDIR}/slack-ntp"
+	mkdir "${TMPDIR}/slack-ntp"
+	cd "${TMPDIR}/slack-ntp"
+	explodepkg "${NTPPKG}" 1>/dev/null
+	echo "Installing 'ntpdate'"
+	cp usr/sbin/ntpdate "${INITRDMOUNT}/usr/sbin/"
+	pushd "${INITRDMOUNT}"
+	getlibs usr/sbin/ntpdate
+	popd
+	cd ${TMPDIR}
+	rm -rf "${TMPDIR}/slack-ntp"
+fi # if $NTPPKG
 #### Finish up...
 cp -pr ${CWD}/${IMAGEFSDIR}/* "${INITRDMOUNT}/"
 if [ -e "/usr/share/zoneinfo/${TIMEZONE}" ]; then
