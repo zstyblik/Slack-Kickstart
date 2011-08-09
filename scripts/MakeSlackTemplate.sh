@@ -19,8 +19,6 @@
 # Missing features/TODO:
 # * chown root:root instead of stybla
 # * more than one HDD, mdadm, LVM ?
-# * postinst scripts
-# * sysctl.conf
 # * slackpkg
 set -e
 set -u
@@ -705,6 +703,7 @@ if [ -e "${CWD}/config-files/authorized_keys" ]; then
 fi
 
 #### passwords
+printf "Altering passwords.\n"
 pushd "${INITRDMOUNT}"
 cp etc/passwd etc/passwd.org
 sed -e 's#bash#sh#g' etc/passwd.org > etc/passwd
@@ -716,11 +715,12 @@ rm -f etc/shadow.org
 popd
 #### post-installation scripts
 if [ -n "${POSTINST}" ]; then
+	printf "Copying post-installation scripts.\n"
 	IFS=","
 	mkdir -p ${INITRDMOUNT}/etc/post-install || true
 	for POSTSCRIPT in ${POSTINST}; do
 		if [ ! -e "${CWD}/post-install/${POSTSCRIPT}" ]; then
-			printf "Post-install script '%s' doesn't exist." \
+			printf "Post-install script '%s' doesn't exist.\n" \
 				${CWD}/post-install/${POSTSCRIPT}
 			continue
 		fi # if ! -e
