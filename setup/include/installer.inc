@@ -155,10 +155,6 @@ HTTP_FTP_Install() {
 		fi
 		cd "/var/log/mount/slackware/${DISKSET}"
 
-		#		dialog --title "Downloading package" --infobox "Downloading: \n\
-		#${PACKAGE_SERVER}/slackware${LIBDIRSUFFIX}/${PACKAGE} \n\
-		#\n\
-		#" 10 60
 		printf "Downloading package -- '%s'" "${PACKAGE}"
 		if wget "${PACKAGE_SERVER}/slackware${LIBDIRSUFFIX}/${PACKAGE}" \
 			2> ${REDIR} ; then
@@ -168,15 +164,6 @@ HTTP_FTP_Install() {
 			continue
 		fi
 	
-		#		if [ $? != 0 ];then
-			#			dialog --title "Downloading package" --infobox \
-			#				"Error Downloading: \n\ ${PACKAGE_SERVER}/slackware${LIBDIRSUFFIX}/${PACKAGE} \n\
-			#Skipping package!\n\
-			#\n\
-			#" 10 60
-			#			continue
-			#		fi
-		
 		if [ ! -e "/var/log/mount/slackware/${PACKAGE}" ]; then
 			echo "Package doesn't exist??? FAILED!!!"
 			continue

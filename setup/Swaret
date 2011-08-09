@@ -34,8 +34,6 @@ cd /mnt/usr/Download
 # swaret for Slackware 10.2
 # from sourceforge.net
 #
-#dialog --title "Packages updates by swaret" --infobox \
-#	"Downloading swaret from sourceforge mirror " 10 50
 echo "Packages updated by swaret - downloading from SF.net"
 
 # TODO ~ unhardcode
