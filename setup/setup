@@ -120,7 +120,6 @@ if [ -e /tmp/Kickstart.END ]; then
 			rm -f /mnt/${POSTSCRIPT}
 		done # for POSTSCRIPT
 		IFS=""
-		rm -rf /mnt/etc/post-install
 	fi # if -n POSTSCRIPT
 	#
 	# Installation ends!
