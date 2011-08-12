@@ -8,3 +8,5 @@ EOF
 
 cat ${SYSCTLFILE}.new ${SYSCTLFILE}.org 2>/dev/null | sort | \
 	uniq > ${SYSCTLFILE}
+
+rm -f /etc/sysctl.new /etc/sysctl.org
