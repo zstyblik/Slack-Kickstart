@@ -116,7 +116,7 @@ if [ -e /tmp/Kickstart.END ]; then
 			fi # if ! -e ...
 			cp -ap /etc/post-install/${POSTSCRIPT} /mnt
 			chmod +x /mnt/${POSTSCRIPT}
-			chroot /mnt ${POSTSCRIPT} || true
+			chroot /mnt ./${POSTSCRIPT} || true
 			rm -f /mnt/${POSTSCRIPT}
 		done # for POSTSCRIPT
 		IFS=""
