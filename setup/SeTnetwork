@@ -31,7 +31,16 @@ if [ "${NTPHOST}" ]; then
 	printf "\n\n#\n# ntpdate at boot time\n#\n\n" >> /mnt/etc/rc.d/rc.local
 	echo "/usr/sbin/ntpdate -s ${NTPHOST} && /sbin/hwclock --${HWCLOCK} \
 --systohc" >> /mnt/etc/rc.d/rc.local
-fi
+	if [ -d /mnt/etc/cron.hourly ]; then
+		cat > /mnt/etc/cron.hourly/ntp.sh << EON
+#!/bin/sh
+# Synchronize time from NTP server
+/usr/sbin/ntpdate -s ${NTPHOST} && /sbin/hwclock --${HWCLOCK} --systohc
+EON
+
+		chmod +x /mnt/etc/cron.hourly/ntp.sh
+  fi # if -d /mnt/etc...
+fi # if $NTPHOST
 #
 # Network Configuration
 #
