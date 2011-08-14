@@ -2,9 +2,10 @@
       #### Slack-Kicstart ####
       ########################
 
-Author:         Davide Zito <dave@slack-kickstart.org>
-Last revision:  XX/YY/2011
-Version:        X.Y
+Author:            Davide Zito <dave@slack-kickstart.org>
+Fork maintaned by: Zdenek Styblik <zdenek.styblik@gmail.com>
+Last revision:     XX/YY/2011
+Version:           trunk
 
 #################################################################
 #                          WARNING!!!!                          #
@@ -62,6 +63,55 @@ kernels-\
 See the online tutorial at:
 
  http://www.slack-kickstart.org/index.php?ART=documentation
+
+CONFIG FILE:
+------------
+
+~~~ SNIP ~~~
+DISTRO=slackware64-13.37
+# Hostname to use, however this gets over-riden by hostname from DHCP server
+HOSTNAME=slack-kickstart
+ETH=eth0
+PACKAGE_SERVER=nfs:10.117.8.1:/mnt/linux_install/slackware/slackware64-13.37
+TAG=s64-13.37-light
+# Root password
+PASSWD=password
+KERNEL=kernels/huge.s/bzImage
+# Type of auto-update: slapt-get, swaret, slackpkg
+AUTOUPDATE=none
+# If true, only SSHd should be started after installation
+SECURE=yes
+
+# Dynamic IP settings from DHCP
+DHCP=yes
+
+# Static IP settings - these are mutually exclusive with DHCP=yes
+INET=1.2.3.4
+MASK=255.255.255.0
+GW=1.2.3.5
+NS1=1.2.3.6
+NS2=1.2.3.7
+# END static IP settings
+
+# Auto-start installation
+AUTOSTART=no
+
+SLAPTGET=http://software.jaos.org/slackpacks/10.2/slapt-get-0.9.11a-i386-1.tgz
+NTPHOST=ntp.server.net
+# Where individual config per host can be downloaded. http:// is presumed.
+CONFIGHOST=10.117.8.2
+# List of post-installation scripts to execute
+POSTINST="ssh.sh,sysctl.sh"
+
+# Partition scheme.
+# % sfdisk; format is used to define partitions
+DISK="DEVICE[/dev/vda]=[/],[ext4],[,2750,83];[swap],[swap],[,250,82];"
+
+# Timezone, Keymap & HWClock
+KEYMAP=qwerty/us.map
+HWCLOCK=utc
+TIMEZONE=Europe/Prague
+~~~ SNIP ~~~
 
 LICENSE:
 --------
