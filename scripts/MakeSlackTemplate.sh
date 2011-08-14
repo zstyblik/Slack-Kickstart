@@ -729,8 +729,6 @@ if [ -n "${POSTINST}" ]; then
 fi # if -n POSTINST
 #### chown root:root everything
 find "${INITRDMOUNT}" ! -user root ! -group root | xargs chown root:root
-find "${INITRDMOUNT}"  ! -user root ! -group root -printf "%p %u:%g\n" \
-	> /tmp/f.log
 #
 df -h "${INITRDMOUNT}"
 umount "${INITRDMOUNT}"
