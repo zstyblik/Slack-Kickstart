@@ -27,7 +27,7 @@ if [ ! -d /mnt/etc/rc.d/ ]; then
 	mkdir -p /mnt/etc/rc.d
 fi
 
-if [ "${NTPHOST}" ];then
+if [ "${NTPHOST}" ]; then
 	printf "\n\n#\n# ntpdate at boot time\n#\n\n" >> /mnt/etc/rc.d/rc.local
 	echo "/usr/sbin/ntpdate -s ${NTPHOST} && /sbin/hwclock --${HWCLOCK} \
 --systohc" >> /mnt/etc/rc.d/rc.local
@@ -35,7 +35,7 @@ fi
 #
 # Network Configuration
 #
-echo "${HOSTNAME}" > /mnt/etc/HOSTNAME
+printf "%s\n" ${HOSTNAME} > /mnt/etc/HOSTNAME
 cp /mnt/etc/rc.d/rc.inet1.conf /mnt/etc/rc.d/rc.inet1.conf.orig
 #
 # Network configuration: 
