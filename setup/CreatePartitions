@@ -34,7 +34,6 @@ cat /tmp/SFDiskPartitionsList | \
 #
 # Test Partitions
 #
-# TODO ~ this won't pass % set -e; -> stuff it into if $(cmd) ; then ???
 if ! sfdisk -V ${BOOTDEV} > ${REDIR} 2>&1 ; then
 	echo
 	echo "FATAL ERROR on partitions table - Aborting"
