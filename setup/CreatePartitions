@@ -35,10 +35,9 @@ cat /tmp/SFDiskPartitionsList | \
 # Test Partitions
 #
 if ! sfdisk -V ${BOOTDEV} > ${REDIR} 2>&1 ; then
-	echo
-	echo "FATAL ERROR on partitions table - Aborting"
-	echo "HINT: Check tty4 for errors."
-	echo "HINT: Partitions exceeding ${BOOTDEV} size ?"
+	printf "\nFATAL ERROR on partitions table - Aborting\n"
+	printf "HINT: Check tty4 for errors.\n"
+	printf "HINT: Partitions exceeding %s size ?\n" ${BOOTDEV}
 	FireBugInfo
 	exit 1
 fi
@@ -58,5 +57,4 @@ echo ",,,*" | sfdisk --force ${BOOTDEV} -N1 > ${REDIR} 2>&1
 if ! ps aux | grep -e 'udevd' | grep -q -v -e 'grep'; then
 	/usr/sbin/makedevs.sh > ${REDIR} 2>&1
 fi
-echo "[OK]"
-echo
+printf "[OK]\n\n"
