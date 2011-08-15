@@ -66,10 +66,10 @@ getlibs()
 		return 1
 	fi
 	for LIBLINE in $(ldd "${BINARY}" | tr ' ' '#'); do
-		echo "${LIBLINE}" | grep -q -e 'linux-vdso' && continue;
-		echo "${LIBLINE}" | grep -q -e 'linux-gate' && continue;
+		printf "%s\n" ${LIBLINE} | grep -q -e 'linux-vdso' && continue;
+		printf "%s\n" ${LIBLINE} | grep -q -e 'linux-gate' && continue;
 		if printf "${LIBLINE}" | awk -F'#' '{ print $1 }' | grep -q -e '^/' ; then
-			LIBTOCOPY=$(echo "${LIBLINE}" | awk -F'#' '{ print $1 }');
+			LIBTOCOPY=$(printf "%s\n" ${LIBLINE} | awk -F'#' '{ print $1 }');
 			LIBDIR=$(dirname "${LIBTOCOPY}")
 			if [ -z "${LIBTOCOPY}" ]; then
 				echo "[FAIL] failed to automagically copy lib dep for '${BINARY}'"
@@ -94,10 +94,10 @@ getlibs()
 			continue
 		fi
 		if printf "${LIBLINE}" | grep -q -e '=>' ; then
-			LIBPOINTER=$(echo "${LIBLINE}" | awk -F'#' '{ print $3 }')
+			LIBPOINTER=$(printf "%s\n" ${LIBLINE} | awk -F'#' '{ print $3 }')
 			LIBREAL=$(file "${LIBPOINTER}" | cut -d '`' -f 2 | tr -d "'")
 			LIBDIR=$(dirname "${LIBPOINTER}")
-			LIBLINK=$(echo "${LIBLINE}" | awk -F'#' '{ print $1 }')
+			LIBLINK=$(printf "%s\n" ${LIBLINE} | awk -F'#' '{ print $1 }')
 			if [ -z "${LIBREAL}" -o -z "${LIBLINK}" ]; then
 				echo "[FAIL] failed to to automagically copy lib dep for '${BINARY}'"
 				continue
@@ -138,7 +138,7 @@ parse_package()
 		echo ""
 		return 1
 	fi
-	echo "${SLACKCDPATH}/${PKGFOUND}"
+	printf "%s/%s\n" ${SLACKCDPATH} ${PKGFOUND}
 	return 0
 } # parse_package
 # DESC: show help text
@@ -277,8 +277,8 @@ chmod +x ${INITRDMOUNT}/etc/udhcpc/default.script
 # A: external file as a list of modules to copy including "paths"
 KERNELVER=$(strings "${BZIMG}" | \
 	grep -E -e '^(2|3)\.[0-9]+(\.[0-9]+(\.[0-9]+))' | awk '{ print $1 }')
-KERNELVERNO=$(echo "${KERNELVER}" | awk -F'-' '{ print $1 }')
-KERNELSUFFIX=$(echo "${KERNELVER}" | awk -F'-' '{ print $2 }')
+KERNELVERNO=$(printf "%s\n" ${KERNELVER} | awk -F'-' '{ print $1 }')
+KERNELSUFFIX=$(printf "%s\n" ${KERNELVER} | awk -F'-' '{ print $2 }')
 KMODPATH="${TMPDIR}/slack-kmodules/lib/modules/2.6.37.6"
 KMODCPTO="${INITRDMOUNT}/lib/modules/${KERNELVER}"
 KMODSPKGSTR="kernel-modules-${KERNELVERNO}"

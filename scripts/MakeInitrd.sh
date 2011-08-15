@@ -107,7 +107,7 @@ fi
 #
 KNAME=$(basename "${KERNEL}")
 ENCRYPTED=$(openssl passwd -1 "${PASSWD}")
-INSTALL_TYPE=$(echo "${PACKAGE_SERVER}" | awk -F':' '{ print $1 }')
+INSTALL_TYPE=$(printf "%s\n" ${PACKAGE_SERVER} | awk -F':' '{ print $1 }')
 #########################
 # Copy from template	#
 # and mount in loopback	#
@@ -205,9 +205,7 @@ gzip "${HOST}" \
 #
 mv "${HOST}.gz" rootdisks
 
-echo
-echo "Root image for '${HOST}' has been created!"
-echo 
+printf "\nRoot image for '%s' has been created!\n\n" ${HOST}
 
 if [ "${INSTALL_TYPE}" = "cdrom"  ]; then
 
@@ -222,8 +220,7 @@ if [ "${INSTALL_TYPE}" = "cdrom"  ]; then
 EOP
 
 	else
-		echo "See 'rootdisks/Install.${HOST}.txt' for install info."
-		echo
+		printf "\nSee 'rootdisks/Install.%s.txt' for install info.\n\n" ${HOST}
 		cat << EOF > ./rootdisks/Install.${HOST}.txt
 
 ------------- LILO INSTALL  -----------------------

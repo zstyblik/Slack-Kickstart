@@ -41,13 +41,10 @@ if [ ! -d "${WORKDIR}/Kickstart/tmp" ]; then
 	else
 		printf "\t[ FAIL ]\n"
 		MYSELF=$(whoami)
-		echo
-		echo "Error creating work directory '${BSDIR}' !"  
-		echo "Create '${BSDIR}' with root, and change  "
-		echo "permissions to 'Kickstart' subdirectory: "
-		echo
-		echo " chown ${MYSELF}:users '${BSDIR}'"
-		echo
+		printf "\nError creating work directory '%s' !\n\n" ${BSDIR}
+		printf "Create '%s' with root, and change \n" ${BSDIR}
+		printf "permissions to 'Kickstart' subdirectory: \n\n"
+		printf " chown %s:users '%s'\n\n" ${MYSELF} ${BSDIR}
 		exit 1
 	fi
 fi
@@ -55,11 +52,8 @@ fi
 # Utilities ~ Find utils that we need
 ######################################
 if [ ! -f $(which mkisofs) ]; then
-	echo
-	echo "Fatal error: cannot find 'mkisofs'"
-	echo 
-	echo "HINT: Check if package 'cdrtools' is installed"
-	echo
+	printf "\nFatal error: cannot find 'mkisofs'\n"
+	printf "\nHINT: Check if package 'cdrtools' is installed\n\n"
 	exit 1
 fi
 MKISOFS=$(which mkisofs)
@@ -83,17 +77,13 @@ done
 # Get the kernel
 #
 if [ $# -lt 2 ]; then
-	echo
-	echo "usage: ${0} <initrd_image> <kernel> [Slackware_CD]"
-	echo
+	printf "Usage: %s <initrd_image> <kernel> [Slackware_CD]\n" ${0}
 	exit 1
 fi
 
 INITRDIMG=${1:-''}
 if [ ! -e "${INITRDIMG}" ]; then
-	echo
-	echo "Error: Cannot find initrd image '${INITRDIMG}'"
-	echo
+	printf "\nError: Cannot find initrd image '%s'.\n\n" ${INITRDIMG}
 	exit 1
 fi
 
@@ -101,16 +91,12 @@ if file "${INITRDIMG}" | grep -q -e "gzip compressed data" ; then
 	# OK
 	true
 else
-	echo
-	echo "Error: Not an initrd image '${INITRDIMG}'!"
-	echo
+	printf "\nError: Not an initrd image '%s'!\n\n" ${INITRDIMG}
 	exit 1
 fi
 KERNEL=${2:-''}
 if [ ! -e "${KERNEL}" ]; then
-	echo
-	echo "Error: Cannot find kernel '${KERNEL}'"
-	echo
+	printf "\nError: Cannot find kernel '%s'\n\n" ${KERNEL}
 	exit 1
 fi
 if file "${KERNEL}" | \
@@ -119,9 +105,7 @@ if file "${KERNEL}" | \
 	# dummy
 	true
 else
-	echo
-	echo "Error: Not a Slackware kernel '${KERNEL}' !"
-	echo
+	printf "\nError: Not a Slackware kernel '%s'!\n\n" ${KERNEL}
 	exit 1
 fi
 
@@ -158,15 +142,13 @@ cp "${KERNEL}" "${ISODIR}/kernels/vmlinuz"
 if [ $# -eq 3 ]; then
 	PACKAGE_SERVER=$(grep -e 'PACKAGE_SERVER' "./config-files/${HOST}.cfg" | \
 		sed -e 's/PACKAGE_SERVER=//g')
-	PKG_REP=$(echo "${PACKAGE_SERVER}" | awk -F ':' '{ print $1 }')
+	PKG_REP=$(printf "%s\n" ${PACKAGE_SERVER} | awk -F ':' '{ print $1 }')
 
 	if [ "${PKG_REP}" = "cdrom" ]; then
 		SLACKCD=${3:-''}
 		TAG=$(grep -e 'TAG' "./config-files/${HOST}.cfg" | -e sed 's/TAG=//g')
 		if [ ! -e "${SLACKCD}/CHECKSUMS.md5" ]; then
-			echo
-			echo "Cannot find Slackware CD on '${SLACKCD}' - Aborting"
-			echo
+			printf "\nCannot find Slackware CD on '%s' - Aborting\n\n" ${SLACKCD}
 			exit 1
 		fi
 		if [ -d "${SLACKCD}/slackware" ]; then
@@ -174,9 +156,8 @@ if [ $# -eq 3 ]; then
 		elif [ -d "${SLACKCD}/slackware64" ]; then
 			LIBDIRSUFFIX=64
 		else
-			echo
-			echo "Directory '${SLACKCD}/slackware' nor '${SLACKCD}/slackware64' found."
-			echo
+			printf "\nDirectory '%s/slackware' nor '%s/slackware64' found.\n\n" \
+				${SLACKCD} ${SLACKCD}
 			exit 1
 		fi
 		#
@@ -186,7 +167,7 @@ if [ $# -eq 3 ]; then
 		cp "${SLACKCD}/CHECKSUMS.md5" "${ISODIR}"
 	
 		for PACKAGE in $(grep -v -e '^#' "./taglists/${TAG}" | cut -d ":" -f 1); do
-			DISKSET=$(echo "${PACKAGE}" | cut -d "/" -f 1)
+			DISKSET=$(printf "%s\n" ${PACKAGE} | cut -d "/" -f 1)
 			if [ ! -d "${ISODIR}/slackware${LIBDIRSUFFIX}/${DISKSET}" ]; then
 				mkdir "${ISODIR}/slackware${LIBDIRSUFFIX}/${DISKSET}"
 				echo
@@ -198,24 +179,20 @@ if [ $# -eq 3 ]; then
 			chmod 750 ${ISODIR}/slackware${LIBDIRSUFFIX}/${PACKAGE}*.t?z
 		done
 	else
-		echo
-		echo "- Package repository is not on CD-ROM: packages will not be copied."
+		printf "- Package repository is not on CD-ROM: packages will not be copied.\n"
 	fi
 fi
 
-echo
-echo
-echo "-------------- Creating ISO image: -------------"
+printf "\n\n-------------- Creating ISO image: -------------\n"
 mkisofs -R -J -l -o "${BSDIR}/${CD_IMAGE}" -b isolinux/isolinux.bin \
 	-c isolinux/boot.cat \
 	-sort "${ISODIR}/isolinux/iso.sort" -no-emul-boot -boot-load-size 4 \
 	-boot-info-table -V "Slack-Kickstart" -A "Slack-Kickstart" "${ISODIR}"
-echo "------------------------------------------------"
+printf "------------------------------------------------\n"
 #
 # Cleans $ISODIR
 #
 rm -rf "${ISODIR}"
 
-echo
-echo "ISO image '${BSDIR}/${CD_IMAGE}' created with success: now burn it with your favorite tool!"
-echo
+printf "\nISO image '%s/%s' created with success: now burn it with your \
+favorite tool!\n\n" ${BSDIR} ${CD_IMAGE}
