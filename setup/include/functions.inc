@@ -29,10 +29,10 @@ REDIR=/dev/tty4
 
 . /etc/Kickstart.cfg
 
-DEVICE=$(echo "${DISK}" | cut -d '[' -f 2 | cut -d ']' -f 1)
+DEVICE=$(printf "%s\n" ${DISK} | cut -d '[' -f 2 | cut -d ']' -f 1)
 BOOTDEV="${DEVICE}"
-PARTITIONS=$(echo "${DISK}" | cut -d '=' -f 2 | sed -e 's/,0,/,,/g')
-PKG_SRC=$(echo "${PACKAGE_SERVER}" | cut -d ":" -f 1)
+PARTITIONS=$(printf "%s\n" ${DISK} | cut -d '=' -f 2 | sed -e 's/,0,/,,/g')
+PKG_SRC=$(printf "%s\n" ${PACKAGE_SERVER} | cut -d ":" -f 1)
 KERN=$(basename "${KERNEL}")
 
 if [ ! -d /var/log/mount ]; then
@@ -41,10 +41,8 @@ fi
 
 #----------------------------- FUNCTIONS ------------------------------------------#
 FireBugInfo() {
-	echo
-	echo "HINT: If you think you've found a bug please"
-	echo "HINT: report it to bugs@slack-kickstart.org "
-	echo
+	printf "\nHINT: If you think you've found a bug please\n"
+	echo "HINT: report it to bugs@slack-kickstart.org\n\n"
 	return 0
 } # FireBugInfo
 # MARK
@@ -60,7 +58,7 @@ Extract_Info() {
 	#
 	while [ 0 ]; do
 		#get field
- 		CHAR=$(echo "${PARTITIONS}" | cut -d ';' -f "${COUNTER}" | \
+ 		CHAR=$(printf "%s\n" ${PARTITIONS} | cut -d ';' -f "${COUNTER}" | \
 			cut -d [ -f	"${1}" | cut -d ] -f 1)
 		if [ "$CHAR" = "" ] ; then
 			break
@@ -71,18 +69,18 @@ Extract_Info() {
 				if [ "$CHAR" = "none" ]; then
 					CHAR=""
 				else
-					echo "${COUNTER} ${CHAR}"
+					printf "%s %s\n" ${COUNTER} ${CHAR}
 				fi
 				;;
 			'2')
 				if [ "$CHAR" = "empty" ] || [ "$CHAR" = "extended" ]; then
 					CHAR=""
 				else
-					echo "${COUNTER} ${CHAR}"
+					printf "%s %s\n" ${COUNTER} ${CHAR}
 				fi
 				;;
 			'4')
-				echo "${CHAR}"
+				printf "%s\n" ${CHAR}
 		esac
 		COUNTER=$(($COUNTER+1))
 	done
@@ -95,13 +93,13 @@ Extract_Info() {
 Create_Fstab() {
 	rm -f  /tmp/fstab
 	for ROW in $(cat /tmp/MountpointsList | grep -v -e 'none'); do
-		ROWNO=$(echo "${ROW}" | awk '{ print $1 }')
+		ROWNO=$(printf "%s\n" ${ROW} | awk '{ print $1 }')
 		FSYS=$(grep -e "^${ROWNO}" /tmp/FilesystemsList | grep -v -e 'none' | \
 			awk '{ print $2 }')
 		if [ -z "${FSYS}" ]; then
 			continue
 		fi
-		MOUNTPOINT=$(echo "${ROW}" | cut -d " " -f 2)
+		MOUNTPOINT=$(printf "%s\n" ${ROW} | cut -d " " -f 2)
 		case "${MOUNTPOINT}" in
 		'/')
 			printf "%-16s %-16s %-11s %-16s %-3s %s\n" "${DEVICE}${ROWNO}" \
@@ -208,7 +206,7 @@ Scan_CD() {
 			/bin/umount /var/log/mount
 			echo " [OK] [CD/DVD is on ${CDROM}]"
 			sleep 2
-			echo "${CDROM}" > /tmp/CDROM
+			printf "%s\n" ${CDROM} > /tmp/CDROM
 			break
 		fi
 	done

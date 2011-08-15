@@ -177,7 +177,8 @@ EOP
 
 if [ "${DHCP0}" != "yes" ]; then
 	echo "nameserver ${NS1}" > /mnt/etc/resolv.conf
-	echo "${INET0}		${HOSTNAME} ${HOSTNAME}.${DOMAIN}" >> /mnt/etc/hosts
+	printf "%s		%s %s.%s\n" ${INET0} ${HOSTNAME} ${HOSTNAME} \
+		${DOMAIN}>> /mnt/etc/hosts
 	if [ ! -z "${NS2}" ]; then
 		echo "nameserver ${NS2}" >> /mnt/etc/resolv.conf
 	fi

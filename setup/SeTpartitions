@@ -31,7 +31,7 @@ Check_Smart_Array
 echo "Formatting partitions on ${DEVICE}:"
 for FS in $(cat /tmp/FilesystemsList); do
 	# see if this partition has a filesystem associated
-	FS2=$(echo "${FS}" | cut -d " " -f 2)
+	FS2=$(printf "%s\n" ${FS} | cut -d " " -f 2)
 	case "$FS2" in
 		'xfs')
 			COMMAND="make_xfs"
@@ -58,7 +58,7 @@ for FS in $(cat /tmp/FilesystemsList); do
 			CHECK="n"
 	esac
 
-	PART_NUMBER=$(echo "${FS}" | cut -d " " -f 1)
+	PART_NUMBER=$(printf "%s\n" ${FS} | cut -d " " -f 1)
 	PARTITION_DEVICE="${DEVICE}${PART_NUMBER}"
 
 	printf "${PARTITION_DEVICE} [${FS2}] ..... "
@@ -91,8 +91,8 @@ if [ $? -ne 0 ]; then
 fi
 
 for MOUNT in $(cat /tmp/MountpointsList); do
-	MOUNTPOINT=$(echo "${MOUNT}" | cut -d " " -f 2)
-	MOUNTPARSED=$(echo "${MOUNT}" | cut -d " " -f 1)
+	MOUNTPOINT=$(printf "%s\n" ${MOUNT} | cut -d " " -f 2)
+	MOUNTPARSED=$(printf "%s\n" ${MOUNT} | cut -d " " -f 1)
 	MOUNT_DEVICE="${DEVICE}${MOUNTPARSED}"
 	
 	if [ "${MOUNT_DEVICE}" = ${ROOTPART} ]; then

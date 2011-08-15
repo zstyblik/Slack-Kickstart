@@ -60,10 +60,10 @@ Create_Install_List() {
 		# from repository. It's done grepping package name
 		# from filename list.
 		#
-		PKG=$(echo "${PACKAGE}" | cut -d "/" -f 2)
-		DIRECTORY=$(echo "${PACKAGE}" | cut -d "/" -f 1)
+		PKG=$(printf "%s\n" ${PACKAGE} | cut -d "/" -f 2)
+		DIRECTORY=$(printf "%s\n" ${PACKAGE} | cut -d "/" -f 1)
 		FILENAME=$(cat /mnt/PkgList.txt | grep -e "^${PKG}-[[:digit:]]")
-		echo "${DIRECTORY}/${FILENAME}" >> /mnt/usr/Download/install.list
+		printf "%s/%s\n" ${DIRECTORY} ${FILENAME} >> /mnt/usr/Download/install.list
 	done
 	return 0
 } # Create_Install_List
@@ -84,8 +84,8 @@ NFS_Mount() {
 	#
 	/sbin/rpc.portmap > $REDIR 2>&1
 
-	NFS_SERVER=$(echo "${1}" | cut -d ":" -f 2)
-	NFS_DIR=$(echo "${1}" | cut -d ":" -f 3)
+	NFS_SERVER=$(printf "%s\n" ${1} | cut -d ":" -f 2)
+	NFS_DIR=$(printf "%s\n" ${1} | cut -d ":" -f 3)
 	#
 	# Mounts NFS PKG Repository
 	#
@@ -94,11 +94,9 @@ NFS_Mount() {
 
 	if [ $? != 0 ];then
 		echo "[FAILED]"
-		echo 
-		echo "FATAL ERROR mounting '$NFS_SERVER:$NFS_DIR' - Aborting."
-		echo "HINT: Check network/nfs configuration."
-		echo "HINT: Check if your NFS server is alive!"
-		echo
+		printf "\nFATAL ERROR mounting '$NFS_SERVER:$NFS_DIR' - Aborting.\n"
+		printf "HINT: Check network/nfs configuration.\n"
+		printf "HINT: Check if your NFS server is alive!\n\n"
 		exit 1
 	fi
 	return 0
@@ -115,8 +113,7 @@ HTTP_FTP_Install() {
 	# Downloads pkg list
 	# from choosen mirror
 	#
-	echo
-	echo "[ Using: ${PACKAGE_SERVER} ]"
+	printf "\n[ Using: %s ]\n" ${PACKAGE_SERVER}
 	printf "Downloading packages list ..... "
 	
 	wget "${PACKAGE_SERVER}/CHECKSUMS.md5" -O /mnt/CHECKSUMS.md5 2> ${REDIR} 
@@ -149,7 +146,7 @@ HTTP_FTP_Install() {
 		# Creates diskset directory, downloads package
 		# and installs it.
 		#
-		DISKSET=$(echo "${PACKAGE}" | cut -d "/" -f 1)
+		DISKSET=$(printf "%s\n" ${PACKAGE} | cut -d "/" -f 1)
 		if [ ! -d $DISKSET ]; then
 			mkdir "/var/log/mount/slackware/${DISKSET}"
 		fi
