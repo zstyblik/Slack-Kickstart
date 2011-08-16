@@ -49,7 +49,6 @@ fi
 #
 mv swaret-1.6.2-noarch-1.tgz.tar swaret-1.6.2-noarch-1.tgz
 
-#/usr/lib/setup/installpkg -infobox --root /mnt swaret-1.6.2-noarch-1.tgz
 /usr/lib/setup/installpkg --root /mnt swaret-1.6.2-noarch-1.tgz
 #
 # If PKG Repository is NFS or CD-Rom , is better to point
