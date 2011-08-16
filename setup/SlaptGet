@@ -49,8 +49,7 @@ SLAPTPKG=$(basename "${SLAPTGET}")
 if [ "${PKG_SRC}" = "http" -o "${PKG_SRC}" = "ftp" ]; then
 	PSERV="SOURCE=${PACKAGE_SERVER}"
 else
-# TODO ~ unhardcode ?
-	PSERV="SOURCE=http://www.slackware.at/data/slackware-10.2"
+	PSERV="SOURCE=http://mirrors.kernel.org/slackware/${DISTRO}"
 fi
 #
 # Adds repository to update sources in slapt-get
