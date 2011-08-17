@@ -1,3 +1,59 @@
-#!/bin/bash
-# TODO ~ write this one :)
-exit 0
+#!/bin/sh
+# 2011/Aug/17 @ Zdenek Styblik
+# Desc: Script to install and configure slackpkg as part of Slack-kickstart
+#
+. /usr/lib/setup/include/functions.inc
+
+SPKG=$(grep -e 'ap/slackpkg-*.t?z$' /mnt/CHECKSUMS.md5 | awk '{ print $2 }')
+
+if [ -z "${SPKG}" ]; then
+	printf "Slackpkg package not found in CHECKSUMS.md5.\n"
+	touch /tmp/Kickstart.END
+	exit 0
+fi # if -z SPKG
+
+printf "Getting '%s'... " % ${SPKG}
+if [ ${PKG_SRC} = "http" -o ${PKG_SRC} = "ftp" ]; then
+	if wget "${PACKAGE_SERVER}/${SPKG}" >/dev/null 2>&1; then
+		printf "\t[ OK ]\n"
+	else
+		printf "\t[FAIL]\n"
+		printf "Downloading of '%s' has failed. Skipping Slackpkg.\n"
+		touch /tmp/Kickstart.END
+		exit 0
+	fi # if wget
+else
+	if cp ${PACKAGE_SERVER}/${SPKG} ./ >/dev/null 2>&1 ; then
+		printf "\t[ OK ]\n"
+	else
+		printf "\t[FAIL]\n"
+	fi # if cp
+fi # if PKG_SRC
+
+printf "I'm about to install '%s'.\n" % ${SPKG}
+installpkg ${SPKG}
+
+SPKGPATH=/mnt/etc/slackpkg
+
+S1="off"
+S2="on"
+if ! ls /mnt/var/log/packages/ | grep -q -e '^gnupg-' ; then
+	printf "GnuPG doesn't seem to be installed.\nChecking of packages' GPG \
+signatures will be set to off!\n"
+	S1="on"
+	S2="off"
+fi # if ! ls
+
+cp ${SPKGPATH}/slackpkg.conf ${SPKGPATH}/slackpkg.dist
+sed -e "@CHECKGPG=$S1@c CHECKGPG=$S2" "@BATCH=off@c BATCH=on" \
+	${SPKGPATH}/slackpkg.conf.dist > ${SPKGPATH}/slackpkg.conf
+
+cat > /mnt/etc/cron.daily/slackpkg-upgrade << EOS
+#!/bin/sh
+# _Update_ list of packages _and_ _upgrade_ system
+/usr/sbin/slackpkg update && \
+	/usr/sbin/slackpkg upgrade-all
+EOS
+chmod +x /mnt/etc/cron.daily/slackpkg-upgrade
+
+# EOF
