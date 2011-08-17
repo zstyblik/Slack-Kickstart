@@ -76,7 +76,7 @@ cd -
 #
 #------------------------------------------------------------------------------
 cat << EOZ > /mnt/etc/rc.d/rc.upgrade
-#!/bin/bash
+#!/bin/sh
 #
 # PKG List update by slapt-get
 # 
