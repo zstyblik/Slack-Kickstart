@@ -34,8 +34,7 @@ fi
 cd /mnt/usr/Download
 #
 # Downloads and installs
-# swaret for Slackware 10.2
-# from sourceforge.net
+# swaret from sourceforge.net
 #
 echo "Packages updated by swaret - downloading from SF.net"
 
@@ -124,7 +123,7 @@ EOP
 #
 #--------------------------------------------------------------------------------------------------
 cat << EOZ > /mnt/etc/rc.d/rc.upgrade
-#!/bin/bash
+#!/bin/sh
 #
 # PKG List updates by Swaret
 # 
