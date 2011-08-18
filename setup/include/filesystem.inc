@@ -81,7 +81,7 @@ make_jfs() {
 make_reiserfs() {
 
 	# do the format
-	mkreiserfs -ff -h r5 ${1} >$REDIR 2>&1 && echo "[OK]" && echo "[OK]"
+	mkreiserfs -ff -h r5 ${1} >$REDIR 2>&1 && echo "[OK]"
 	return 0
 } # make_reiserfs
 
