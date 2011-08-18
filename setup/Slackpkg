@@ -31,7 +31,7 @@ else
 	fi # if cp
 fi # if PKG_SRC
 
-if ! ls /var/log/packages/ | grep -q -e '^slackpkg-' ; then
+if ! ls /mnt/var/log/packages/ | grep -q -e '^slackpkg-' ; then
 	printf "I'm about to install '%s'.\n" % ${SPKG}
 	installpkg ${SPKG}
 else
