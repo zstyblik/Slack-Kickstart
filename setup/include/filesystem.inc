@@ -99,7 +99,7 @@ make_swap() {
 make_xfs() {
 
 	# do the format
-	mkfs.xfs -f ${1} >$REDIR 2>&1 && echo "[OK]" && echo "[OK]"
+	mkfs.xfs -f ${1} >$REDIR 2>&1 && echo "[OK]"
 	return 0
 } # make_xfs
 #-------------------- END OF FUNCTIONS ---------------------------#
