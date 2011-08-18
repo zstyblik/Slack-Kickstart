@@ -94,7 +94,7 @@ make_swap() {
 
 	# Creating Swap partition(s)
 	RC=1
-	/sbin/mkswap -c ${1} >$REDIR 2>&1 && RC=0 || RC=1
+	/sbin/mkswap ${1} >$REDIR 2>&1 && RC=0 || RC=1
 	return $RC
 } # make_swap 
 
