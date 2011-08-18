@@ -51,7 +51,7 @@ signatures will be set to off!\n"
 fi # if ! ls
 
 cp ${SPKGPATH}/slackpkg.conf ${SPKGPATH}/slackpkg.dist
-sed -e "@CHECKGPG=$S1@c CHECKGPG=$S2" "@BATCH=off@c BATCH=on" \
+sed -e "/CHECKGPG=$S1/c CHECKGPG=$S2" "/BATCH=off/c BATCH=on" \
 	${SPKGPATH}/slackpkg.conf.dist > ${SPKGPATH}/slackpkg.conf
 
 cat > /mnt/etc/cron.daily/slackpkg-upgrade << EOS
