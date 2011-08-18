@@ -21,23 +21,25 @@ if [ ${PKG_SRC} = "http" -o ${PKG_SRC} = "ftp" ]; then
 		printf "\t[FAIL]\n"
 		printf "Downloading of '%s' has failed. Skipping Slackpkg.\n"
 		touch /tmp/Kickstart.END
-		exit 0
+		exit 1
 	fi # if wget
 else
 	if cp /var/log/mount/${SPKG} ./ >/dev/null 2>&1 ; then
 		printf "\t[ OK ]\n"
 	else
 		printf "\t[FAIL]\n"
+		exit 1
 	fi # if cp
 fi # if PKG_SRC
 
 if ! ls /mnt/var/log/packages/ | grep -q -e '^slackpkg-' ; then
-	printf "I'm about to install '%s'.\n" % ${SPKG}
-	installpkg ${SPKG}
+	PKG=$(printf "%s\n" ${SPKG} | awk -F'/' '{ print $3 }')
+	printf "I'm about to install '%s'.\n" % ${PKG}
+	installpkg ${PKG}
 else
 	printf "It seems slackpkg is already installed. Skipping"
 fi
-rm -f ${SPKG}
+rm -f ${PKG}
 
 SPKGPATH=/mnt/etc/slackpkg
 
