@@ -62,11 +62,10 @@ for FS in $(cat /tmp/FilesystemsList); do
 	PARTITION_DEVICE="${DEVICE}${PART_NUMBER}"
 
 	printf "${PARTITION_DEVICE} [${FS2}] ..... "
-	$COMMAND ${PARTITION_DEVICE} ${INODES} ${CHECK}
-	#
-	# Check if OK
-	#
-	if [ $? -ne 0 ]; then
+	if $COMMAND ${PARTITION_DEVICE} ${INODES} ${CHECK} ; then
+		printf "\t[ OK ]\n"
+	else
+		printf "\t[FAIL]\n"
 		printf "\nFATAL ERROR formatting %s - Aborting\n" "${PARTITION_DEVICE}"
 		echo "HINT: Check tty4 for errors during format."
 		FireBugInfo
