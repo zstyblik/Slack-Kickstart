@@ -166,6 +166,11 @@ HTTP_FTP_Install() {
 			continue
 		fi
 
+		if [ -d "/var/log/mount/slackware/${PACKAGE}" ]; then
+			# this is a serie and we are going to skip it silently
+			continue
+		fi
+
 		#		installpkg -infobox -root /mnt "/var/log/mount/slackware/${PACKAGE}"
 		printf "Installing -- '%s'" "${PACKAGE}"
 		if /usr/lib/setup/installpkg --root /mnt \
@@ -202,6 +207,16 @@ NFS_CD_Install() {
 		#
 		# Installs package from NFS repository
 		#
+		if [ ! -e "/var/log/mount/slackware${LIBDIRSUFFIX}/${PACKAGE}" ]; then
+			printf "Package '%s' doesn't exist? FAILED!!!\n" ${PACKAGE}
+			continue
+		fi
+
+		if [ -d "/var/log/mount/slackware${LIBDIRSUFFIX}/${PACKAGE}" ]; then
+			# this is a serie and we are going to skip it silently
+			continue
+		fi
+
 		#		installpkg -infobox -root /mnt "/var/log/mount/slackware/${PACKAGE}"
 		printf "Installing -- '%s'" "${PACKAGE}"
 		if /usr/lib/setup/installpkg --root /mnt \
