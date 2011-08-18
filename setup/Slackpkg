@@ -4,8 +4,8 @@
 #
 . /usr/lib/setup/include/functions.inc
 
-SPKG=$(grep -e 'ap/slackpkg-*.t?z$' /mnt/CHECKSUMS.md5 | awk '{ print $2 }')
-
+SPKG=$(grep -e 'ap\/slackpkg-' /mnt/CHECKSUMS.md5 | awk '{ print $2 }' \
+	| grep -E -e 't(g|x)+z$')
 if [ -z "${SPKG}" ]; then
 	printf "Slackpkg package not found in CHECKSUMS.md5.\n"
 	touch /tmp/Kickstart.END
@@ -23,15 +23,20 @@ if [ ${PKG_SRC} = "http" -o ${PKG_SRC} = "ftp" ]; then
 		exit 0
 	fi # if wget
 else
-	if cp ${PACKAGE_SERVER}/${SPKG} ./ >/dev/null 2>&1 ; then
+	if cp /var/log/mount/${SPKG} ./ >/dev/null 2>&1 ; then
 		printf "\t[ OK ]\n"
 	else
 		printf "\t[FAIL]\n"
 	fi # if cp
 fi # if PKG_SRC
 
-printf "I'm about to install '%s'.\n" % ${SPKG}
-installpkg ${SPKG}
+if ! ls /var/log/packages/ | grep -q -e '^slackpkg-' ; then
+	printf "I'm about to install '%s'.\n" % ${SPKG}
+	installpkg ${SPKG}
+else
+	printf "It seems slackpkg is already installed. Skipping"
+fi
+rm -f ${SPKG}
 
 SPKGPATH=/mnt/etc/slackpkg
 
