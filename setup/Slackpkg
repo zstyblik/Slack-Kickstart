@@ -12,6 +12,7 @@ if [ -z "${SPKG}" ]; then
 	exit 0
 fi # if -z SPKG
 
+cd /mnt/usr/Download
 printf "Getting '%s'... " % ${SPKG}
 if [ ${PKG_SRC} = "http" -o ${PKG_SRC} = "ftp" ]; then
 	if wget "${PACKAGE_SERVER}/${SPKG}" >/dev/null 2>&1; then
@@ -61,4 +62,14 @@ cat > /mnt/etc/cron.daily/slackpkg-upgrade << EOS
 EOS
 chmod +x /mnt/etc/cron.daily/slackpkg-upgrade
 
+SLACKPKG_MIRROR=${SLACKPKG_MIRROR:-"http://mirrors.kernel.org/slackware/$DISTRO/"}	
+
+mv /mnt/etc/slackpkg/mirrors /mnt/etc/slackpkg/mirrors.dist 2>/dev/null
+touch /mnt/etc/slackpkg/mirrors
+cat > /mnt/etc/slackpkg/mirrors << EOM
+# SlackPkg mirror added by Slack-Kickstart
+${SLACKPKG_MIRROR}
+#
+EOM
+cat /mnt/etc/slackpkg/mirrors.dist >> /mnt/etc/slackpkg/mirrors
 # EOF
