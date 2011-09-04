@@ -1,8 +1,20 @@
 #!/bin/sh
-# SSH post-inst
-printf "Post-install ~ '/etc/ssh/sshd_config'.\n"
-sed -r -e '/^[#]?PasswordAuthentication/c \PasswordAuthentication no' \
-	-e '/^[#]?Protocol/c \Protocol 2' /etc/ssh/sshd_config \
+# 2011/Sep/04 @ Zdenek Styblik
+# Desc: SSH daemon post-install script.
+SSHDCONF="/etc/ssh/sshd_config"
+
+printf "Post-install ~ '%s'.\n" ${SSHDCONF}
+
+if [ ! -e ${SSHDCONF} ]; then
+	printf "* '%s' doesn't seem to exist.\n" ${SSHDCONF}
+	exit 0
+fi
+
+sed -r \
+	-e '/^[#]?PasswordAuthentication/c \PasswordAuthentication no' \
+	-e '/^[#]?Protocol/c \Protocol 2' \
 	-e '/^[#]?PubkeyAuthentication/c \PubkeyAuthentication yes' \
-	> /etc/ssh/sshd_config.new
-mv /etc/ssh/sshd_config.new /etc/ssh/sshd_config
+	${SSHDCONF} > ${SSHDCONF}.new
+
+mv ${SSHDCONF}.new ${SSHDCONF}
+# EOF
