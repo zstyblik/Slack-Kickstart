@@ -105,11 +105,12 @@ if [ ! -e /tmp/NONET ]; then
 # Ntpdate is executed only if network is UP
 #
 	if [ -e /tmp/NETWORK_UP -a "${NTPHOST}" != "none" ]; then
-		printf "Syncing clock with $NTPHOST ..... " 
+		printf "Syncing clock with %s ..... " "${NTPHOST}"
 		if /usr/sbin/ntpdate "${NTPHOST}" > /dev/null 2>&1 ; then
 			echo "[OK]"
 			printf "Saving date on hardware clock ....." && \
-				/usr/sbin/hwclock --${HWCLOCK} --systohc > /dev/null 2>&1 && echo "[OK]" 
+				/usr/sbin/hwclock --${HWCLOCK} --systohc > /dev/null 2>&1 && \
+				echo "[OK]" || echo "[FAILED]"
 		else 
 			echo "[FAILED]"
 		fi # if ntpdate
