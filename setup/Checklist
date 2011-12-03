@@ -82,7 +82,7 @@ if [ ${ETH} ] && ! ip link show dev "${ETH}" > /dev/null 2>&1 ; then
 			touch "/tmp/CHECKLIST_FAILED"
 			echo
 			echo "FATAL ERROR on Ethernet card - Aborting"
-			echo "I'm sorry, i did  not found a kernel "
+			echo "I'm sorry, I did not found a kernel "
 			echo "module for your Ethernet card."
 			FireBugInfo
 			exit 1
