@@ -1,25 +1,26 @@
-      ########################
-      #### Slack-Kicstart ####
-      ########################
+Slack-Kickstart
+---------------
 
 Author:            Davide Zito <dave@slack-kickstart.org>
 Fork maintaned by: Zdenek Styblik <zdenek.styblik@gmail.com>
 Last revision:     XX/YY/2011
 Version:           trunk
 
-#################################################################
-#                          WARNING!!!!                          #
-#                                                               #
-# THE AUTO INSTALLER CREATES PARTITIONS ON THE DESTINATION DISK #
-# ERASING THE PREVIOUS CONTENTS: YOU'LL LOST ALL YOUR DATA ON   #
-# DESTINATION DISK, SO BE CAREFUL BEFORE USING THIS TOOL!!!!    #
-#################################################################	
 
 INFO:
 -----
 
 Slack-Kickstart provides automatic installation of Slackware and Slackware64 
-Linux distribution.
+Linux distribution. This is a FORKED version of ORIGINAL Slack-Kickstart which
+brings some changes. 
+First of all, it brings support for Slackware64-13.37 as well as script for
+building ramdisks, thus long-term support for future releases. Some changes to
+scripts were made as well as changes to config file of Slack-Kickstart.
+
+Main goal is to have an effective way of unattended installation of Slackware on
+machine with virtual machines in mind especially. For a real hardware,
+Slack-kickstart might not be as flexible as Anaconda is.
+
 
 REQUIREMENTS:
 -------------
@@ -29,6 +30,7 @@ REQUIREMENTS:
 - syslinux (Needed to create Iso & PXE images).
 - cdrtools (as above).
 - openssl (Needed to encrypt the root password).
+
 
 QUICKSTART:
 -----------
@@ -44,15 +46,15 @@ Kernel images can be stored in any directory layout:
 kernels-\
 	|
 	[dir] bare.i
-    	|	\
+	|	\
 	|	bzImage		
 	|
 	[dir] scsi.s 
-    	|	\
+	|	\
 	|	bzImage		
 	|
 	[dir] adaptec.s 
-    	|	\
+	|	\
 	|	bzImage		
 	|
 	[dir] custom
@@ -64,54 +66,130 @@ See the online tutorial at:
 
  http://www.slack-kickstart.org/index.php?ART=documentation
 
+
 CONFIG FILE:
 ------------
 
-~~~ SNIP ~~~
-DISTRO=slackware64-13.37
-# Hostname to use, however this gets over-riden by hostname from DHCP server
-HOSTNAME=slack-kickstart
-ETH=eth0
-PACKAGE_SERVER=nfs:10.117.8.1:/mnt/linux_install/slackware/slackware64-13.37
-TAG=s64-13.37-light
-# Root password
-PASSWD=password
-KERNEL=kernels/huge.s/bzImage
-# Type of auto-update: slapt-get, swaret, slackpkg
-AUTOUPDATE=none
-# If true, only SSHd should be started after installation
-SECURE=yes
+Unlike Red Hat's Anaconda "recipe", Slack-Kickstart is using one configuration
+file. This approach has its advantages(simplicity) and disadvantages(less
+flexibility). However it is good enough now.
+Copy-cat of Anaconda is being considered for later.
 
-# Dynamic IP settings from DHCP
-DHCP=yes
+Configuration file is located in '/etc/Kickstart.cfg'.
 
-# Static IP settings - these are mutually exclusive with DHCP=yes
-INET=1.2.3.4
-MASK=255.255.255.0
-GW=1.2.3.5
-NS1=1.2.3.6
-NS2=1.2.3.7
-# END static IP settings
 
-# Auto-start installation
-AUTOSTART=no
+CONFIG FILE OPTIONS:
+--------------------
 
-SLAPTGET=http://software.jaos.org/slackpacks/10.2/slapt-get-0.9.11a-i386-1.tgz
-NTPHOST=ntp.server.net
-# Where individual config per host can be downloaded. http:// is presumed.
-CONFIGHOST=10.117.8.2
-# List of post-installation scripts to execute
-POSTINST="ssh.sh,sysctl.sh"
+DISTRO=[SLACKWARE_VERSION]
+* eg. DISTRO=slackware64-13.37
 
-# Partition scheme.
-# % sfdisk; format is used to define partitions
-DISK="DEVICE[/dev/vda]=[/],[ext4],[,2750,83];[swap],[swap],[,250,82];"
+HOSTNAME=[string]
+* hostname of installed machine/Slack-kickstart
+* gets over-riden by hostname received from DHCP server
 
-# Timezone, Keymap & HWClock
-KEYMAP=qwerty/us.map
-HWCLOCK=utc
-TIMEZONE=Europe/Prague
-~~~ SNIP ~~~
+PACKAGE_SERVER=[ cdrom:|[ftp|http|nfs]:[source] ]
+* installation source
+* eg. PACKAGE_SERVER=cdrom:
+* eg. PACKAGE_SERVER=ftp://domain.tld/
+* eg. PACKAGE_SERVER=http://domain.tld/
+* eg. PACKAGE_SERVER=nfs:nfshost.domain.tld:/install-directory
+
+TAG=[PATH_TO_TAG_LIST]
+* name of TAG list to use for installation
+* TAG lists are located in directory 'taglists/'
+
+PASSWD=[UNECRYPTED_PASSWORD]
+* password to be set for root user in Slack-kickstart and installed machine
+* password gets encrypted by OpenSSL prior to copy on ramdisk
+* use of SSH keys instead of passwords is strongly advised
+* eg. PASSWD=secretPassword
+
+KERNEL=[PATH_TO_KERNEL_IMAGE]
+* which kernel image to use for Slack-Kickstart
+* eg. KERNEL=kernels/huge.s/bzImage
+
+KS=<[ftp|http|nfs]:[source]>
+* Installation program will download Kickstart.cfg from specified location
+* This will over-ride Kicstart.cfg file in ramdisk
+* Kickstart.cfg must be named as hostname thus if Hostname is 'darkstar', then
+installation program will be looking for '<source>/darkstar.cfg'
+* It is also possible to pass KS as kernel parameter. Kernel parameter has
+higher priority than the one specified in Kickstart.cfg
+
+AUTOUPDATE=[none|slapt-get|swaret|slackpkg]
+* in which way, if any, to perform system auto-update
+
+SECURE=[yes|no]
+* if set to 'yes', only SSHd will be started after the boot
+
+AUTOSTART=[yes|no]
+* automatically start with Slack-kickstart installation
+* automatically reboot machine after installation
+
+PREINST=<script1,script2,scriptN>
+POSTINST=<script1,script2,scriptN>
+* list of pre-installation/post-installation scripts
+* comma ',' is used as delimiter
+* scripts are located in '/etc/pre-install' resp. '/etc/post-install'
+* pre-installation scripts are executed prior to partitioning
+* post-installation scripts are executed prior to setup's exit
+
+DISK="DEVICE[<DEVICE>]=[<MOUNT_POINT>],[<FS>],[,<SIZE>,<FS_TYPE>]"
+* % sfdisk; format is used to define partitions
+* multiple partitions are supported
+* must be specified for each device
+* eg. DISK="DEVICE[/dev/vda]=[/],[ext4],[,2750,83];[swap],[swap],[,250,82];"
+
+KEYMAP=[keymap]
+* keymap to be used in installer and installed machine
+* eg. KEYMAP=qwerty/us.map
+
+HWCLOCK=[localtime|utc]
+* eg. HWCLOCK=utc
+
+TIMEZONE=[TZ]
+* eg. TIMEZONE=Europe/Prague
+
+NTPHOST=<FQDN|IP_ADDRESS>
+* FQDN, or IP address, of NTP servers to get current time from
+* eg. NTPHOST=ntp.domain.tld
+
+<NETWORK=[DEVICE=[IFACE];PROTO=[static|dhcp];]\
+  <IP=[IP_ADDR];<MASK=[NETMASK];><GATEWAY=[IP_ADDR];>\
+  <NAMESERVER=[IP_NS1,IP_NS2,IP_NSn];> > >
+* obsoletes other network options
+* must be specified for each device that is supposed to be configured
+
+ETH=[INTERFACE]
+* interface name
+* eg. ETH=eth0
+* obsolete
+
+DHCP=[yes|no]
+* use DHCP for $ETH interface
+* obsolete
+
+<INET=[IP_ADDRESS]>
+* static IP address configuration for $ETH interface
+* obsolete
+
+<MASK=[NET_MASK]>
+* static network mask for $ETH interface
+* obsolete
+
+<GW=[IP_ADDR_GATEWAY]>
+* static IP address of gateway for $ETH interface
+* obsolete
+
+<NS1=[IP_NAMESERVER]>
+<NS2=[IP_NAMESERVER]>
+* IP addresses of 1st and 2nd nameserver
+* obsolete
+
+SLAPTGET=<LINK_TO_SLAPTGET>
+* URL to get Slaptget
+
 
 LICENSE:
 --------
@@ -131,4 +209,5 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 For detailed info on license, please, see LICENSE.
+
 
