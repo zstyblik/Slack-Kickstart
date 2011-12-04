@@ -164,7 +164,6 @@ fi
 . "${KSCONFIG}"
 TIMEZONE=${TIMEZONE:-'Universal'}
 PASSWDENC=$(openssl passwd -1 "${PASSWD}")
-POSTINST=${POSTINST:-''}
 
 BZIMG=${2:-''}
 if [ -z "${BZIMG}" ]; then
@@ -712,21 +711,14 @@ sed -r -e "/^root:/c \root:${PASSWDENC}:14466:0:::::" \
 	etc/shadow.org > etc/shadow
 rm -f etc/shadow.org
 popd
+#### pre-installation scripts
+printf "Copying pre-installation scripts.\n"
+mkdir -p ${INITRDMOUNT}/etc/pre-install || true
+cp -r ${CWD}/pre-install/* ${INITRDMOUNT}/etc/pre-install/
 #### post-installation scripts
-if [ -n "${POSTINST}" ]; then
-	printf "Copying post-installation scripts.\n"
-	IFS=","
-	mkdir -p ${INITRDMOUNT}/etc/post-install || true
-	for POSTSCRIPT in ${POSTINST}; do
-		if [ ! -e "${CWD}/post-install/${POSTSCRIPT}" ]; then
-			printf "Post-install script '%s' doesn't exist.\n" \
-				${CWD}/post-install/${POSTSCRIPT}
-			continue
-		fi # if ! -e
-		cp ${CWD}/post-install/${POSTSCRIPT} ${INITRDMOUNT}/etc/post-install/
-	done # for POSTSCRIPT
-	IFS=""
-fi # if -n POSTINST
+printf "Copying post-installation scripts.\n"
+mkdir -p ${INITRDMOUNT}/etc/post-install || true
+cp -r ${CWD}/post-install/* ${INITRDMOUNT}/etc/post-install/
 #### chown root:root everything
 find "${INITRDMOUNT}" ! -user root ! -group root | xargs chown root:root
 #
