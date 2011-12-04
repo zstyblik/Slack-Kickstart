@@ -47,9 +47,13 @@ FireBugInfo() {
 } # FireBugInfo
 # MARK
 Extract_Info() {
+	ARG=${1:-''}
+	if [ -z "${ARG}" ]; then
+		return 1
+	fi
+	#
 	COUNTER=1
 	CHAR="FOO"
-
 	# Argument value:
 	#
 	# 2 = Mountpoint list
@@ -58,13 +62,13 @@ Extract_Info() {
 	#
 	while [ 0 ]; do
 		#get field
- 		CHAR=$(printf "%s\n" ${PARTITIONS} | cut -d ';' -f "${COUNTER}" | \
-			cut -d [ -f	"${1}" | cut -d ] -f 1)
+		CHAR=$(printf "%s\n" ${PARTITIONS} | cut -d ';' -f "${COUNTER}" | \
+			cut -d [ -f "${ARG}" | cut -d ] -f 1)
 		if [ "$CHAR" = "" ] ; then
 			break
 		fi
 
-		case "${1}" in
+		case "${ARG}" in
 			'3')
 				if [ "$CHAR" = "none" ]; then
 					CHAR=""
@@ -265,7 +269,7 @@ Check_CD() {
 		echo "HINT: Check configuration on /etc/Kickstart.cfg"
 		echo
 		FireBugInfo
- 		exit 1
+		exit 1
 	fi
 	echo " [OK]"
 	umount  /var/log/mount
