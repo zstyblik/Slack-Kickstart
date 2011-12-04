@@ -712,13 +712,17 @@ sed -r -e "/^root:/c \root:${PASSWDENC}:14466:0:::::" \
 rm -f etc/shadow.org
 popd
 #### pre-installation scripts
-printf "Copying pre-installation scripts.\n"
-mkdir -p ${INITRDMOUNT}/etc/pre-install || true
-cp -r ${CWD}/pre-install/* ${INITRDMOUNT}/etc/pre-install/
+if [ -d "${CWD}/pre-install/" ]; then
+	printf "Copying pre-installation scripts.\n"
+	mkdir -p ${INITRDMOUNT}/etc/pre-install || true
+	cp -r ${CWD}/pre-install/* ${INITRDMOUNT}/etc/pre-install/
+fi
 #### post-installation scripts
-printf "Copying post-installation scripts.\n"
-mkdir -p ${INITRDMOUNT}/etc/post-install || true
-cp -r ${CWD}/post-install/* ${INITRDMOUNT}/etc/post-install/
+if [ -d "${CWD}/post-install/" ]; then
+	printf "Copying post-installation scripts.\n"
+	mkdir -p ${INITRDMOUNT}/etc/post-install || true
+	cp -r ${CWD}/post-install/* ${INITRDMOUNT}/etc/post-install/
+fi
 #### chown root:root everything
 find "${INITRDMOUNT}" ! -user root ! -group root | xargs chown root:root
 #
