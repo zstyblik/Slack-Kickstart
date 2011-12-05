@@ -14,8 +14,10 @@ Slack-Kickstart provides automatic installation of Slackware and Slackware64
 Linux distribution. This is a FORKED version of ORIGINAL Slack-Kickstart which
 brings some changes. 
 First of all, it brings support for Slackware64-13.37 as well as script for
-building ramdisks, thus long-term support for future releases. Some changes to
-scripts were made as well as changes to config file of Slack-Kickstart.
+building ramdisks, thus long-term support for future releases. And you can,
+finally, make these by yourself. I have made some modifications to scripts as
+well - mostly clean ups. And for the last, but not least, some of configuration
+parameters got changed - some got added, some got obsolete.
 
 Main goal is to have an effective way of unattended installation of Slackware on
 machine with virtual machines in mind especially. For a real hardware,
@@ -156,7 +158,7 @@ NTPHOST=<FQDN|IP_ADDRESS>
 * eg. NTPHOST=ntp.domain.tld
 
 <NETWORK=[DEVICE=[IFACE];PROTO=[static|dhcp];]\
-  <IP=[IP_ADDR];<MASK=[NETMASK];><GATEWAY=[IP_ADDR];>\
+  <IP=[IP_ADDR];MASK=[NETMASK];><GATEWAY=[IP_ADDR];>\
   <NAMESERVER=[IP_NS1,IP_NS2,IP_NSn];> > >
 * obsoletes other network options
 * must be specified for each device that is supposed to be configured
