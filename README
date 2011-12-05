@@ -90,6 +90,10 @@ HOSTNAME=[string]
 * hostname of installed machine/Slack-kickstart
 * gets over-riden by hostname received from DHCP server
 
+DOMAIN=[string]
+* domain of which installed machine is part of
+* eg. DOMAIN=domain.tld
+
 PACKAGE_SERVER=[ cdrom:|[ftp|http|nfs]:[source] ]
 * installation source
 * eg. PACKAGE_SERVER=cdrom:
