@@ -3,7 +3,6 @@ Slack-Kickstart
 
 Author:            Davide Zito <dave@slack-kickstart.org>
 Fork maintaned by: Zdenek Styblik <zdenek.styblik@gmail.com>
-Last revision:     XX/YY/2011
 Version:           trunk
 
 
@@ -31,7 +30,27 @@ REQUIREMENTS:
 - Tcl & Tk (Needed to run the configuration GUI TkGui.tcl).
 - syslinux (Needed to create Iso & PXE images).
 - cdrtools (as above).
-- openssl (Needed to encrypt the root password).
+- openssl (Needed to encrypt the root's password).
+
+
+LICENSE:
+--------
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+For detailed info on license, please, see LICENSE.
 
 
 QUICKSTART:
@@ -49,24 +68,27 @@ kernels-\
 	|
 	[dir] bare.i
 	|	\
-	|	bzImage		
+	|	bzImage
 	|
 	[dir] scsi.s 
 	|	\
-	|	bzImage		
+	|	bzImage
 	|
 	[dir] adaptec.s 
 	|	\
-	|	bzImage		
+	|	bzImage
 	|
 	[dir] custom
 	|	\
-	|	mykernel1 mykernel2 ...	
-	
+	|	mykernel1 mykernel2 ...
+	|
+	[dir] packaged-kernel
+	|	\
+	|	kernel-x.y.txz modules-x.y.txz
 
 See the online tutorial at:
 
- http://www.slack-kickstart.org/index.php?ART=documentation
+  http://www.slack-kickstart.org/index.php?ART=documentation
 
 
 CONFIG FILE:
@@ -112,16 +134,21 @@ PASSWD=[UNECRYPTED_PASSWORD]
 * eg. PASSWD=secretPassword
 
 KERNEL=[PATH_TO_KERNEL_IMAGE]
-* which kernel image to use for Slack-Kickstart
-* eg. KERNEL=kernels/huge.s/bzImage
+* obsolete
+* kernel is being installed from packages
 
-KS=<[ftp|http|nfs]:[source]>
+KS=<[ftp|http|nfs|script]:[source]>
 * Installation program will download Kickstart.cfg from specified location
 * This will over-ride Kicstart.cfg file in ramdisk
 * Kickstart.cfg must be named as hostname thus if Hostname is 'darkstar', then
 installation program will be looking for '<source>/darkstar.cfg'
+* script =~ get another KS file the way you prefer. Result must be saved as
+'/tmp/Kickstart.cfg.new'
 * It is also possible to pass KS as kernel parameter. Kernel parameter has
-higher priority than the one specified in Kickstart.cfg
+higher priority than the one specified in Kickstart.cfg. 
+* eg. KS=http://domain.tld/kickstart/ ->
+  * http://domain.tld/kickstart/$HOSTNAME.cfg
+  * http://domain.tld/kickstart/Kickstart.cfg
 
 AUTOUPDATE=[none|slapt-get|swaret|slackpkg]
 * in which way, if any, to perform system auto-update
@@ -139,9 +166,20 @@ POSTINST=<script1,script2,scriptN>
 * comma ',' is used as delimiter
 * scripts are located in '/etc/pre-install' resp. '/etc/post-install'
 * pre-installation scripts are executed prior to partitioning
+* pre-installation scripts are executed without any CWD
 * post-installation scripts are executed prior to setup's exit
+* post-installation scripts are executed chrooted in the new root('/')
 
-DISK="DEVICE[<DEVICE>]=[<MOUNT_POINT>],[<FS>],[,<SIZE>,<FS_TYPE>]"
+BOOTLOADER=[BOOTDEV=<DISK_DEVICE>;
+  [LOCATION=<mbr|partition|none>;]
+  [APPEND=<PARAM1 PARAM2>;]]
+* BOOTDEV, if not specified, defaults to the first drive found in Kickstart.cfg
+* LOCATION=none won't install bootloader
+* LOCATION defaults to 'mbr'
+* LOCATION=partition is not supported at this time
+* spaces in APPEND will be transformed into newlines('\n')
+
+DISK="DEVICE[<DISK_DEVICE>]=[<MOUNT_POINT>],[<FS>],[,<SIZE>,<FS_TYPE>]"
 * % sfdisk; format is used to define partitions
 * multiple partitions are supported
 * must be specified for each device
@@ -161,9 +199,9 @@ NTPHOST=<FQDN|IP_ADDRESS>
 * FQDN, or IP address, of NTP servers to get current time from
 * eg. NTPHOST=ntp.domain.tld
 
-<NETWORK=[DEVICE=[IFACE];PROTO=[static|dhcp];]\
+NETWORK=[DEVICE=[IFACE];PROTO=[static|dhcp];]\
   <IP=[IP_ADDR];MASK=[NETMASK];><GATEWAY=[IP_ADDR];>\
-  <NAMESERVER=[IP_NS1,IP_NS2,IP_NSn];> > >
+  <NAMESERVER=[IP_NS1,IP_NS2,IP_NSn];> >
 * obsoletes other network options
 * must be specified for each device that is supposed to be configured
 
@@ -176,20 +214,20 @@ DHCP=[yes|no]
 * use DHCP for $ETH interface
 * obsolete
 
-<INET=[IP_ADDRESS]>
+INET=[IP_ADDRESS]
 * static IP address configuration for $ETH interface
 * obsolete
 
-<MASK=[NET_MASK]>
+MASK=[NET_MASK]
 * static network mask for $ETH interface
 * obsolete
 
-<GW=[IP_ADDR_GATEWAY]>
+GW=[IP_ADDR_GATEWAY]
 * static IP address of gateway for $ETH interface
 * obsolete
 
-<NS1=[IP_NAMESERVER]>
-<NS2=[IP_NAMESERVER]>
+NS1=[IP_NAMESERVER]
+NS2=[IP_NAMESERVER]
 * IP addresses of 1st and 2nd nameserver
 * obsolete
 
@@ -197,23 +235,38 @@ SLAPTGET=<LINK_TO_SLAPTGET>
 * URL to get Slaptget
 
 
-LICENSE:
+KERNELS:
 --------
 
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
+You can use either kernel image wrapped in Slackware package or kernels from
+Slackware DVD/CD or custom built kernel images. Simply put, package wrapping is
+not necessary.
+In case of kernel wrapped into package, package is unpacked by # explodepkg ; at
+first and 'vmlinuz*' is searched for afterwards and used, if found.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+As for kernel modules. At first, search for kernel-modules package is made. If
+not found, similar search is made on Slackware installation medium.
+As to determine which modules to copy, this is determined by script 'modules.sh'
+which must be in the same location as kernel is found. This script must have
+function get_kmodules() which handles all copy operations and, actually,
+whatever you want. If this script doesn't exist, no kernel modules will be
+copied!
 
-You should have received a copy of the GNU General Public License along
-with this program; if not, write to the Free Software Foundation, Inc.,
-51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-For detailed info on license, please, see LICENSE.
+SCRIPTS:
+--------
+
+MakeInitrd.sh
+* creates initrd image based on given template and with given Kickstart.cfg
+* you may then use this image to create an ISO or for PXE boot
+
+MakeIso.sh
+* creates a bootable Slack-Kickstart ISO image
+
+MakeSlackTemplate.sh
+* creates a Slack-Kickstart template which can be used by MakeInitrd.sh script
+
+Tag2List.sh
+* converts Slackware's tag lists into one big tag list used by Slack-Kickstart
 
 
