@@ -111,9 +111,11 @@ DISTRO=[SLACKWARE_VERSION]
 HOSTNAME=[string]
 * hostname of installed machine/Slack-kickstart
 * gets over-riden by hostname received from DHCP server
+* can be passed as Kernel parameter
 
 DOMAIN=[string]
 * domain of which installed machine is part of
+* can be passed as Kernel parameter
 * eg. DOMAIN=domain.tld
 
 PACKAGE_SERVER=[ cdrom:|[ftp|http|nfs]:[source] ]
@@ -123,9 +125,14 @@ PACKAGE_SERVER=[ cdrom:|[ftp|http|nfs]:[source] ]
 * eg. PACKAGE_SERVER=http://domain.tld/
 * eg. PACKAGE_SERVER=nfs:nfshost.domain.tld:/install-directory
 
-TAG=[PATH_TO_TAG_LIST]
+TAG=<[ftp|http|nfs|file]:[source]>
 * name of TAG list to use for installation
+* scripts will use basename to determine the name of taglist and then look in
+'./taglist' directory when building initrd image
 * TAG lists are located in directory 'taglists/'
+* eg. TAG=http://domain.tld/taglists/slackware64-13.37-mini
+* eg. TAG=nfs:1.2.3.4:/taglists/slackware64-13.37-mini
+* eg. TAG=file:/etc/slackware64-13.37-mini
 
 PASSWD=[UNECRYPTED_PASSWORD]
 * password to be set for root user in Slack-kickstart and installed machine
@@ -140,14 +147,15 @@ KERNEL=[PATH_TO_KERNEL_IMAGE]
 KS=<[ftp|http|nfs|script]:[source]>
 * Installation program will download Kickstart.cfg from specified location
 * This will over-ride Kicstart.cfg file in ramdisk
-* Kickstart.cfg must be named as hostname thus if Hostname is 'darkstar', then
-installation program will be looking for '<source>/darkstar.cfg'
+* Kickstart.cfg must be named as hostname.domain.cfg thus if Hostname is
+'darkstar.domain.tld', then installation program will be looking for
+'<source>/darkstar.domain.tld.cfg'
 * script =~ get another KS file the way you prefer. Result must be saved as
 '/tmp/Kickstart.cfg.new'
 * It is also possible to pass KS as kernel parameter. Kernel parameter has
 higher priority than the one specified in Kickstart.cfg. 
 * eg. KS=http://domain.tld/kickstart/ ->
-  * http://domain.tld/kickstart/$HOSTNAME.cfg
+  * http://domain.tld/kickstart/$HOSTNAME.$DOMAIN.cfg
   * http://domain.tld/kickstart/Kickstart.cfg
 
 AUTOUPDATE=[none|slapt-get|swaret|slackpkg]
