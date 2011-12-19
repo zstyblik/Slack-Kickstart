@@ -49,11 +49,30 @@ export PATH
 
 clear
 
-echo
-echo "##########################"
-echo "# Starting installation! #"
-echo "##########################"
-echo
+printf "\n##########################\n"
+printf "# Starting installation! #\n"
+printf "##########################\n\n"
+# Get TAG list first, because there is no point to continue on fail.
+printf "Getting TAG list ..."
+if Get_Tag_List "${TAG}" && [ -s /tmp/taglist ]; then
+	printf " [OK]\n"
+else
+	printf " [FAILED]\n\n"
+	printf "FATAL ERROR - unable to fetch TAG list - Aborting.\n"
+	FireBugInfo
+	exit 1
+fi # if Get_Tag_List ...
+# Run pre-installation scripts, if any.
+if [ -n "${PREINST}" ]; then
+	IFS=','
+	for PRESCRIPT in ${PREINST}; do
+		if [ ! -e "/etc/pre-install/${PRESCRIPT}" ]; then
+			printf "Pre-install script '%s' doesn't seem to exist.\n" "${PRESCRIPT}"
+			continue
+		fi # if [ ! -e ...
+		/etc/pre-install/${PRESCRIPT}
+	done # for PRESCRIPT
+fi # if [ -n "${PREINST}" ]
 #
 # Creates:
 #
@@ -62,11 +81,11 @@ echo
 # - SFDiskPartList
 # - fstab
 #
-Extract_Info 2 > /tmp/MountpointsList
-Extract_Info 3 > /tmp/FilesystemsList
-Extract_Info 4 > /tmp/SFDiskPartitionsList
+#Extract_Info 2 > /tmp/MountpointsList
+#Extract_Info 3 > /tmp/FilesystemsList
+#Extract_Info 4 > /tmp/SFDiskPartitionsList
 #
-Check_Smart_Array
+awk -f /usr/lib/setup/GetPartitions.awk /etc/Kickstart.cfg > /tmp/Partitions
 #
 Create_Fstab
 #
@@ -90,16 +109,12 @@ CreatePartitions && SeTpartitions && Raptor && SeTlilo && SeTnetwork && SeTconfi
 # runs the final tasks
 #
 if [ -e /tmp/Kickstart.END ]; then
-	# 
 	# Cleanup
-	#
 	rm -rf /mnt/usr/Download
 	rm -f /mnt/etc/mtab
 	rm -f /mnt/PkgList.txt
 	rm -f /mnt/CHECKSUMS.md5
-	#
 	# Run postinstall script
-	#
 	if [ -s /etc/postinstall.sh ]; then
 		cp /etc/postinstall.sh /mnt/postinstall.sh
 		chmod +x /mnt/postinstall.sh
@@ -107,10 +122,10 @@ if [ -e /tmp/Kickstart.END ]; then
 		rm /mnt/postinstall.sh
 	fi
 	if [ -n "${POSTINST}" ]; then
-		IFS=","
+		IFS=','
 		for POSTSCRIPT in ${POSTINST}; do
 			if [ ! -e "/etc/post-install/${POSTSCRIPT}" ]; then
-				printf "Post-install script '%s' doesn't seem to exist." \
+				printf "Post-install script '%s' doesn't seem to exist.\n" \
 					${POSTSCRIPT}
 				continue
 			fi # if ! -e ...
@@ -119,33 +134,24 @@ if [ -e /tmp/Kickstart.END ]; then
 			chroot /mnt ./${POSTSCRIPT} || true
 			rm -f /mnt/${POSTSCRIPT}
 		done # for POSTSCRIPT
-		IFS=""
+		IFS=''
 	fi # if -n POSTSCRIPT
-	#
 	# Installation ends!
-	#
 	echo -e \\a
-	echo "Installation complete."
-	echo 
-	#
-	# Ejects CD-Rom before reboot
-	#
+	printf "Installation complete.\n\n"
+	# Eject CD-Rom before reboot
 	if [ -s /tmp/CDROM ] && [ -x /bin/eject ]; then
 		/bin/eject $(cat /tmp/CDROM)
 	fi
-	#
-	# If AUTOSTART=yes umounts all partitions
-	# and reboots the system 
-	#
+	# If AUTOSTART=yes umounts all partitions and reboots the system
 	if [ "$AUTOSTART" = "yes" ]; then
 		umount -a
 		echo "Rebooting system in 5 seconds!!"
 		sleep 5
 		reboot
 	else
-		echo
-		echo "You can reboot now"
-		echo
-	fi
-fi
+		printf "\nYou can reboot now\n\n"
+	fi # if [ "${AUTOSTART}" = "yes" ]
+fi # if [ -e /tmp/Kickstart.END ]
 # end slackware setup script
+# EOF

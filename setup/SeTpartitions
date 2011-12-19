@@ -15,24 +15,20 @@
 . /usr/lib/setup/include/functions.inc
 . /usr/lib/setup/include/filesystem.inc
 #########################################################
-#							#
-#	FORMATTING PARTITIONS				#
-#							#
+#                                                       #
+#	FORMATTING PARTITIONS                                 #
+#                                                       #
 #########################################################
-#
-# Checks if using smart_array or ataraid
-#
-Check_Smart_Array
 #
 # Getting the list of Linux partitions
 # and formatting them with the choosen 
 # filesystem.
 #
-echo "Formatting partitions on ${DEVICE}:"
-for FS in $(cat /tmp/FilesystemsList); do
+printf "Going to format partitions.\n"
+for DEVLINE in $(cat /tmp/Partitions); do
+	FS=$(printf "%s" "${DEVLINE}" | awk -F':' '{ print $4 }')
 	# see if this partition has a filesystem associated
-	FS2=$(printf "%s\n" ${FS} | cut -d " " -f 2)
-	case "$FS2" in
+	case "$FS" in
 		'xfs')
 			COMMAND="make_xfs"
 			;;
@@ -57,11 +53,12 @@ for FS in $(cat /tmp/FilesystemsList); do
 			INODES=4096
 			CHECK="n"
 	esac
+	DEVICE=$(printf "%s" "${DEVLINE}" | cut -d ':' -f 1)
+	DEVICE=$(Check_Smart_Array "${DEVICE}")
+	PARTITION_DEVICE=$(printf "%s" "${DEVLINE}" | cut -d ':' -f 2)
+	PARTITION_DEVICE="${DEVICE}${PARTITION_DEVICE}"
 
-	PART_NUMBER=$(printf "%s\n" ${FS} | cut -d " " -f 1)
-	PARTITION_DEVICE="${DEVICE}${PART_NUMBER}"
-
-	printf "${PARTITION_DEVICE} [${FS2}] ..... "
+	printf "${PARTITION_DEVICE} [${FS}] ..... "
 	if $COMMAND ${PARTITION_DEVICE} ${INODES} ${CHECK} ; then
 		printf "\t[ OK ]\n"
 	else
@@ -70,39 +67,47 @@ for FS in $(cat /tmp/FilesystemsList); do
 		echo "HINT: Check tty4 for errors during format."
 		FireBugInfo
 		exit 1
-	fi
-done # for FS
+	fi # if $COMMAND $PARTITION ...
+done # for DEVLINE
 #
 # Now, we MUST mount root partition on /mnt
-#
 if [ ! -d /mnt ]; then
 	mkdir /mnt
-fi
-mount "${ROOTPART}" /mnt
+fi # if [ ! -d /mnt ]
+ROOTPART=${ROOTPART:-''}
+if [ -z "${ROOTPART}" ]; then
+	ROOTPART=$(Get_Root_Partition)
+	if [ -z "${ROOTPART}" ]; then
+		printf "Root partition not set - Aborting.\n"
+		FireBugInfo
+		exit 1
+	fi # if [ -z "${ROOTPART}" ]
+fi # if [ -z "${ROOTPART}" ]
 #
-# Check if mount was successfull.
-#
-if [ $? -ne 0 ]; then
-	printf "\nFATAL ERROR mounting root partition %s - Aborting" "${ROOTPART}\n"
-	echo "HINT: Check tty4 for errors."
+# Check if we can mount ROOTPART.
+if ! mount "${ROOTPART}" /mnt ; then
+	printf "\nFATAL ERROR mounting root partition %s - Aborting\n" "${ROOTPART}"
+	printf "HINT: Check tty4 for errors.\n"
 	FireBugInfo
 	exit 1
-fi
+fi # if ! mount "${ROOTPART}"
 
-for MOUNT in $(cat /tmp/MountpointsList); do
-	MOUNTPOINT=$(printf "%s\n" ${MOUNT} | cut -d " " -f 2)
-	MOUNTPARSED=$(printf "%s\n" ${MOUNT} | cut -d " " -f 1)
+for DEVLINE in $(cat /tmp/Partitions | cut -d ':' -f 1-3); do
+	MOUNTPOINT=$(printf "%s\n" "${DEVLINE}" | cut -d ':' -f 3)
+	MOUNTPARSED=$(printf "%s\n" "${DEVLINE}" | cut -d ':' -f 2)
+	DEVICE=$(printf "%s\n" "${DEVLINE}" | cut -d ':' -f 1)
 	MOUNT_DEVICE="${DEVICE}${MOUNTPARSED}"
 	
 	if [ "${MOUNT_DEVICE}" = ${ROOTPART} ]; then
 		continue
-	fi
+	fi # if [ "${MOUNT_DEVICE}" ...
 
 	if [ "${MOUNTPOINT}" = "swap" ]; then
 		# Activate swap partition(s)
 		/sbin/swapon "${MOUNT_DEVICE}" > "${REDIR}" 2>&1
 		continue
-	fi
+	fi # if [ "${MOUNTPOINT}" ...
 	mkdir -p "/mnt${MOUNTPOINT}"
 	mount "${MOUNT_DEVICE}" "/mnt${MOUNTPOINT}"
-done
+done # for DEVLINE 
+# EOF

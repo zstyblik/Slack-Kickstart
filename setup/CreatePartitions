@@ -21,40 +21,29 @@
 if ! ps aux | grep -e 'udevd' | grep -q -v -e 'grep' ; then
 	/usr/sbin/makedevs.sh > ${REDIR} 2>&1
 fi
+for DRIVE in $(awk -F':' '{ print $1 }' /tmp/Partitions | sort | uniq); do
+	# Clear MBR & Partition table
+	dd if=/dev/zero of=${DRIVE} bs=512 count=1 > ${REDIR} 2>&1
+	# Create partitions
+	printf "Creating partitions on %s..... " "${DRIVE}"
+	grep -e "^${DRIVE}" /tmp/Partitions | awk -F':' '{ print $5 }' | \
+		sfdisk --no-reread --force ${DRIVE} -uM > ${REDIR} 2>&1
+	# Test Partitions
+	if ! sfdisk -V ${DRIVE} > ${REDIR} 2>&1 ; then
+		printf "[FAIL]\n"
+		printf "\nFATAL ERROR on partitions table - Aborting\n"
+		printf "HINT: Check tty4 for errors.\n"
+		printf "HINT: Partitions exceeding %s size ?\n" ${DRIVE}
+		FireBugInfo
+		exit 1
+	else
+		printf "[OK]\n"
+	fi # if ! sfdisk -V ...
+done # for DRIVE
 #
-# Clears MBR & Partition table
-#
-dd if=/dev/zero of=${BOOTDEV} bs=512 count=1 > ${REDIR} 2>&1
-#
-# Creates partitions
-#
-printf "Creating partitions on %s..... " "${BOOTDEV}"
-cat /tmp/SFDiskPartitionsList | \
-	sfdisk --no-reread --force ${BOOTDEV} -uM > ${REDIR} 2>&1
-#
-# Test Partitions
-#
-if ! sfdisk -V ${BOOTDEV} > ${REDIR} 2>&1 ; then
-	printf "\nFATAL ERROR on partitions table - Aborting\n"
-	printf "HINT: Check tty4 for errors.\n"
-	printf "HINT: Partitions exceeding %s size ?\n" ${BOOTDEV}
-	FireBugInfo
-	exit 1
-fi
-#
-# Makes the first partition bootable
-# -N number
-# Change only the single partition indicated. For example:
-#  % sfdisk /dev/hdb -N5
-#  ,,,*
-#  %
-#
-echo ",,,*" | sfdisk --force ${BOOTDEV} -N1 > ${REDIR} 2>&1
-#
-# Device creation: now we need to create
-# dev nodes for the new partitions
+# Device creation: now we need to create dev nodes for the new partitions
 # Note: makedev command seems to be gone.
 if ! ps aux | grep -e 'udevd' | grep -q -v -e 'grep'; then
 	/usr/sbin/makedevs.sh > ${REDIR} 2>&1
 fi
-printf "[OK]\n\n"
+# EOF

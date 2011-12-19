@@ -10,28 +10,32 @@
 # Created: 19/09/2005 by vonatar
 # Last Revision: 05/08/2006 by vonatar
 #
-
 if [ ! -e '/etc/Kickstart.cfg' ]; then
-	echo "File '/etc/Kickstart.cfg' not found."
-	echo "Exitting checklist."
+	printf "File '/etc/Kickstart.cfg' not found.\nExitting checklist."
 	checklist_failed
 	exit 1
 fi
-
+#
 . /etc/Kickstart.cfg
-
 # Includes common functions
 . /usr/lib/setup/include/functions.inc
 . /usr/lib/setup/include/installer.inc
-
+#
 clear
-
-echo
-echo "#########################"
-echo "# Pre-install Checklist #"
-echo "#########################"
-echo
-
+#
+printf "\n#########################\n"
+printf "# Pre-install Checklist #\n"
+printf "#########################\n\n"
+# To prevent Get_Kickstart() loop. 'no-ks-get' is expected.
+NOKSGET=${1:-''}
+#
+rm -f /tmp/CDROM
+rm -f /tmp/CHECKLIST_FAILED
+rm -f /tmp/NETWORK_UP
+rm -f /tmp/NONET
+rm -f /tmp/NetworkSettings
+rm -f /tmp/Partitions
+#
 ######################
 # Network card check #
 ######################
@@ -43,53 +47,57 @@ echo
 # if false, we need to load kernel
 # modules hoping to find the right one.
 #
-if [ ${ETH} ] && ! ip link show dev "${ETH}" > /dev/null 2>&1 ; then
+awk -f /usr/lib/setup/GetNetSettings.awk \
+	/etc/Kickstart.cfg > /tmp/NetworkSettings
 #
-# No ethernet card support in Kernel.
-# 
-	rm -f /tmp/Modules.info
-	echo "Your kernel has no built-in support for ethernet card!"
-	echo "Probing for MCA, ISA, and PCI network cards: "
-# Note ~ don't we have an udev for this kind of stuff???
-	for CARD in 3c59x acenic de4x5 dgrs eepro100 e1000 tg3 epic100 hp100 ne2k-pci olympic \
-		pcnet32 rcpci 8139too 8139cp sktr tulip via-rhine yellowfin dl2k ns83820 \
-		depca ibmtr 3c501 3c503 3c505 3c507 3c509 3c515 ac3200 \
-		acenic at1700 cosa cs89x0 de4x5 de600 \
-		de620 e2100 eepro eexpress es3210 eth16i ewrk3 fmv18x forcedeth hostess_sv11 \
-		hp-plus hp lne390 ne3210 ni5010 ni52 ni65 sb1000 sealevel smc-ultra \
-		sis900 smc-ultra32 smc9194 wd virtio_net; do
-		modprobe "${CARD}" > /dev/null 2>&1
-		if ip link show dev "${ETH}" > /dev/null 2>&1 ; then
-			echo "Found: $CARD card."
-			echo "/sbin/modprobe $CARD" > /tmp/Modules.info
-			break
-		fi
-	done
-#
-# If /tmp/Modules.info does not
-# exist or is empty, we did not
-# found an ethernet module.
-#
-# The installation can proceed without
-# network support ONLY if PKG server
-# and Kernel repository are on CD-Rom
-#
-	if [ ! -s /tmp/Modules.info ]; then
-		if [ "${PKG_SRC}" = "cdrom" ]; then
-			touch /mnt/NONET
-			echo "No ethernet card found." 
-		else
-			touch "/tmp/CHECKLIST_FAILED"
-			echo
-			echo "FATAL ERROR on Ethernet card - Aborting"
-			echo "I'm sorry, I did not found a kernel "
-			echo "module for your Ethernet card."
-			FireBugInfo
-			exit 1
-		fi # if PKG_SRC
-	fi # if ! -s /tmp/Modules
-fi # if ip link
-
+for IFACE in $(cut -d ',' -f 1 /tmp/NetworkSettings | \
+	grep -E -e '^[a-z]+[0-9]+$'	| sort | uniq); do
+	if ! ip link show dev "${IFACE}" > /dev/null 2>&1 ; then
+	#
+	# No ethernet card support in Kernel.
+	# 
+		rm -f /tmp/Modules.info
+		echo "Your kernel has no built-in support for ethernet card!"
+		echo "Probing for MCA, ISA, and PCI network cards: "
+		# Note ~ don't we have an udev for this kind of stuff???
+		for CARD in 3c59x acenic de4x5 dgrs eepro100 e1000 tg3 epic100 hp100 \
+			ne2k-pci olympic pcnet32 rcpci 8139too 8139cp sktr \
+			tulip via-rhine yellowfin dl2k ns83820 \
+			depca ibmtr 3c501 3c503 3c505 3c507 3c509 3c515 ac3200 \
+			acenic at1700 cosa cs89x0 de4x5 de600 de620 e2100 \
+			eepro eexpress es3210 eth16i ewrk3 fmv18x forcedeth hostess_sv11 \
+			hp-plus hp lne390 ne3210 ni5010 ni52 ni65 sb1000 sealevel smc-ultra \
+			sis900 smc-ultra32 smc9194 wd virtio_net; do
+			modprobe "${CARD}" > /dev/null 2>&1
+			if ip link show dev "${IFACE}" > /dev/null 2>&1 ; then
+				echo "Found: $CARD card."
+				echo "/sbin/modprobe $CARD" > /tmp/Modules.info
+				break
+			fi
+		done # for CARD
+		#
+		# If /tmp/Modules.info does not
+		# exist or is empty, we did not
+		# found an ethernet module.
+		#
+		# The installation can proceed without
+		# network support ONLY if PKG server
+		# and Kernel repository are on CD-Rom
+		#
+		if [ ! -s /tmp/Modules.info ]; then
+			if [ "${PKG_SRC}" = "cdrom" ]; then
+				touch /mnt/NONET
+				printf "No ethernet card found.\n" 
+			else
+				touch "/tmp/CHECKLIST_FAILED"
+				printf "\nFATAL ERROR on Ethernet card - Aborting\n"
+				printf "No kernel module could be found for your Ethernet card.\n"
+				FireBugInfo
+				exit 1
+			fi # if PKG_SRC
+		fi # if ! -s /tmp/Modules
+	fi # if ip link
+done # for IFACE
 #######################
 # Sets up the network #
 #######################
@@ -99,16 +107,99 @@ fi # if ip link
 #
 if [ ! -e /tmp/NONET ]; then
 	if [ ! -e /tmp/NETWORK_UP ]; then
-		/bin/sh /etc/rc.d/rc.inet1 start && touch /tmp/NETWORK_UP
+		for IFACE in $(cut -d ',' -f 1 /tmp/NetworkSettings | \
+			grep -E -e '^[a-z]+[0-9]+$'	| sort | uniq); do
+			if ! /bin/ip link show dev "${IFACE}" &>/dev/null ; then
+				printf "Device '%s' doesn't seem to be present!\n" "${IFACE}"
+				continue
+			fi
+			/bin/ip link set up dev "${IFACE}"
+			/bin/ip address flush dev "${IFACE}"
+			if [ $(grep -e "${IFACE},DHCP" /tmp/NetworkSettings | \
+				cut -d '=' -f 2) = 'yes' ]; then
+				if [ -e "/var/run/udhcpc.${IFACE}.pid" ]; then
+					kill $(cat "/var/run/udhcpc.${IFACE}.pid") >/dev/null
+					rm -f "/var/run/udhcpc.${IFACE}.pid"
+				fi
+				/sbin/udhcpc -i "${IFACE}" -p "/var/run/udhcpc.${IFACE}.pid" \
+					-s /etc/udhcpc/default.script -R -b
+			else
+				IPADDR=$(grep -E -e "^${IFACE},IP[0-9]+=" /tmp/NetworkSettings | \
+					cut -d '=' -f 2)
+				MASK=$(grep -E -e "^${IFACE},MASK[0-9]+=" /tmp/NetworkSettings | \
+					cut -d '=' -f 2)
+				if [ -z "${IPADDR}" ] || [ -z "${MASK}" ]; then
+					printf "IP address('%s') or Netmask('%s') missing for '%s'.\n" \
+						"${IPADDR}" "${MASK}" "${IFACE}"
+					continue
+				fi
+				if /bin/ip address add "${IPADDR}/${MASK}" dev "${IFACE}" ; then
+					printf "Set '%s/%s' for '%s'.\n" "${IPADDR}" "${MASK}" "${IFACE}"
+				else
+					printf "Failed to set '%s/%s' for '%s'\n" "${IPADDR}" \
+						"${MASK}" "${IFACE}"
+				fi # if /bin/ip addr add
+			fi # if DHCP
+			touch /tmp/NETWORK_UP
+		done # for IFACE
+		#
+		printf "Adding Domain Name Servers into /etc/resolv.conf.\n"
+		grep -e '^NAMESERVER=' /tmp/NetworkSettings | cut -d '=' -f 2 | \
+			xargs printf "nameserver %s\n" >> /etc/resolv.conf
+		#
+		for GW in $(grep -e '^GW=' /tmp/NetworkSettings | cut -d '=' -f 2); do
+			printf "Adding default route via '%s'.\n" "${GW}"
+			/bin/ip route add default via "${GW}"
+		done
 	fi # if ! -e /tmp/NET
-#
-# Ntpdate is executed only if network is UP
-#
+	
+	KHOSTNAME=''
+	KDOMAIN=''
+	IFS=' '
+	for KPARAM in $(cat /proc/cmdline); do
+		if printf "%s" "${KPARAM}" | grep -q -e '^KS=' ; then
+			KS=$(printf "%s" "${KPARAM}" | cut -d '=' -f 2-)
+			continue
+		elif printf "%s" "${KPARAM}" | grep -q -e '^HOSTNAME=' ; then
+			KHOSTNAME=$(printf "%s" "${KPARAM}" | cut -d '=' -f 2-)
+			continue
+		elif printf "%s" "${KPARAM}" | grep -q -e '^DOMAIN=' ; then
+			KDOMAIN=$(printf "%s" "${KPARAM}" | cut -d '=' -f 2-)
+			continue
+		fi # if printf ...
+	done # for KPARAM
+	IFS='
+'
+	# HOSTNAME passed via kernel param and no iface has DHCP -> KHOSTNAME
+	if [ -n "${KHOSTNAME}" ] \
+		&& ! grep -q -E -e '^eth[0-9]+,DHCP[0-9]+=yes' /tmp/NetworkSettings ; then
+		#
+		HOSTNAME=$KHOSTNAME
+		if [ -n "${KDOMAIN}" ]; then
+			DOMAIN=$KDOMAIN
+		fi
+	elif grep -q -E -e '^eth[0-9]+,DHCP[0-9]+=yes' /tmp/NetworkSettings ; then
+		HOSTNAME=$(hostname | cut -d '.' -f 1)
+		DOMAIN=$(hostname | cut -d '.' -f 2-)
+	fi
+	# Alternate Kickstart.cfg file
+	if [ "${NOKSGET}" != 'no-ks-get' ] && [ ! -z "${KS}" ]; then
+		printf "KS keyword found in Kickstart.cfg.\n"
+		if [ "${NOKSGET}" != 'no-ks-get' ] && Get_Kickstart "${KS}" \
+			&& [ -s /tmp/Kickstart.cfg.new ]; then
+			#
+			mv /tmp/Kickstart.cfg.new /etc/Kickstart.cfg
+			exec /usr/lib/setup/Checklist no-ks-get
+		else
+			printf "Continuing with default '/etc/Kickstart.cfg'.\n"
+		fi
+	fi # if [ ! -z "${KS}" ]
+	#
+	# Ntpdate is executed only if network is UP
 	if [ -e /tmp/NETWORK_UP -a "${NTPHOST}" != "none" ]; then
 		printf "Syncing clock with %s ..... " "${NTPHOST}"
 		if /usr/sbin/ntpdate "${NTPHOST}" > /dev/null 2>&1 ; then
-			echo "[OK]"
-			printf "Saving date on hardware clock ....." && \
+			printf "[OK]\nSaving date on hardware clock ....." && \
 				/usr/sbin/hwclock --${HWCLOCK} --systohc > /dev/null 2>&1 && \
 				echo "[OK]" || echo "[FAILED]"
 		else 
@@ -121,20 +212,23 @@ fi # if ! -e /tmp/NET
 #############
 #
 # Checks if $DEVICE is supported
-# 
-DEV=$(basename "${BOOTDEV}")
-printf "Checking if '${DEVICE}' is supported ... "
-if ! cat /proc/partitions | grep -e "${DEV}" > /dev/null 2>&1 ; then
-	# fatal error
-	touch /tmp/CHECKLIST_FAILED
-	printf "[FAILED]\n\n\n"
-	echo "FATAL ERROR: cannot access '${DEVICE}' - Aborting"
-	echo "HINT: Does this kernel support '${DEVICE}' ?"
-	FireBugInfo
-	exit 1
-else
-	printf "[OK]\n\n"
-fi
+rm -f /tmp/Partitions
+awk -f /usr/lib/setup/GetPartitions.awk /etc/Kickstart.cfg > /tmp/Partitions
+for DEV in $(awk -F':' '{ print $1 }' /tmp/Partitions | sort | uniq); do
+	printf "Checking if '${DEV}' is supported ... "
+	DEVICE=$(basename "${DEV}")
+	if ! grep -q -e "${DEVICE}" /proc/partitions /dev/null 2>&1 ; then
+		# fatal error
+		touch /tmp/CHECKLIST_FAILED
+		printf "[FAILED]\n\n"
+		printf "FATAL ERROR: cannot access '%s' - Aborting\n" "${DEVICE}"
+		printf "HINT: Does this kernel support '%s' ?\n" "${DEVICE}"
+		FireBugInfo
+		exit 1
+	else
+		printf "[OK]\n"
+	fi # if ! grep -q -e "${DEVICE}" ...
+done # for DEV
 ############################
 # Scans for a cdrom device #
 ############################
@@ -145,7 +239,6 @@ fi
 if [ ! -e /tmp/CDROM ] && [ "${PKG_SRC}" = "cdrom" ]; then
 	Scan_CD
 fi
-
 ########################
 # PACKAGE_SERVER check #
 ########################
@@ -159,10 +252,10 @@ if [ "${PKG_SRC}" = "ftp" -o "${PKG_SRC}" = "http" ]; then
 	if [ ! -s /mnt/CHECKSUMS.md5 ]; then
 		touch /tmp/CHECKLIST_FAILED
 		printf "[FAILED]\n\n"
-		echo "FATAL ERROR: PKG server '${PACKAGE_SERVER}'"
-		echo "FATAL ERROR: is unreachable - Aborting"
-		echo "HINT: Check network configuration."
-		echo "HINT: Check if your PKG server is alive!"
+		printf "FATAL ERROR: PKG server '%s'\n" "${PACKAGE_SERVER}"
+		printf "FATAL ERROR: is unreachable - Aborting\n"
+		printf "HINT: Check network configuration.\n"
+		printf "HINT: Check if your PKG server is alive!\n"
 		FireBugInfo
 		exit 1
 	fi # if ! -s 
@@ -182,17 +275,26 @@ if [ "${PKG_SRC}" = "nfs" ]; then
 	NFS_Mount "${PACKAGE_SERVER}"
 	#
 	# Check CHECKSUMS.md5 on NFS share
-	#
 	if [ ! -s /var/log/mount/CHECKSUMS.md5 ]; then
-		touch "/tmp/CHECKLIST_FAILED"
+		touch /tmp/CHECKLIST_FAILED
 		printf " [FAILED]\n\n"
-		echo "FATAL ERROR: Cannot find ${DISTRO} root on NFS  - Aborting"
-		echo "HINT: Check PKG repository path in /etc/Kickstart.cfg"
-		echo "HINT: Path must point to ${DISTRO} root"
+		printf "FATAL ERROR: Cannot find %s root on NFS  - Aborting\n" "${DISTRO}"
+		printf "HINT: Check PKG repository path in /etc/Kickstart.cfg\n"
+		printf "HINT: Path must point to %s root\n" "${DISTRO}"
 		FireBugInfo
 		exit 1
 	fi
 	umount  /var/log/mount
 	echo "[OK]"
 fi # if PKG_SRC = nfs
+# TAG list file
+printf "\nChecking tag list ..."
+if Get_Tag_List "${TAG}" && [ -s /tmp/taglist ] ; then
+	printf " [OK]\n"
+else
+	touch /tmp/CHECKLIST_FAILED
+	printf " [FAILED]\n\n"
+	printf "FATAL ERROR: Cannot fetch tag list - Aborting\n"
+	FireBugInfo
+fi
 ### END of /usr/lib/setup/Checklist

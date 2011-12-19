@@ -16,6 +16,10 @@ SWARETPKG="swaret-1.6.3-noarch-2.tgz"
 # includes config file & install functions
 #
 . /usr/lib/setup/include/functions.inc
+
+printf "TODO - obsolete ETH still here.\n"
+exit 1
+
 ###########################
 # Slackware updates setup #
 ###########################

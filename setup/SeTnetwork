@@ -54,28 +54,44 @@ cp /mnt/etc/rc.d/rc.inet1.conf /mnt/etc/rc.d/rc.inet1.conf.orig
 # but first, we need to assign the correct value,
 # depending on $ETH
 #
-case "${ETH}" in
-	'eth0')
-		INET0="${INET}"		
-		MASK0="${MASK}"
-		DHCP0="${DHCP}"
-		;;
-	'eth1')
-		INET1="${INET}"	
-		MASK1="${MASK}"
-		DHCP1="${DHCP}"
-		;;
-	'eth2')
-		INET2="${INET}"
-		MASK2="${MASK}"
-		DHCP2="${DHCP}"
-		;;
-	'eth3')
-		INET3="${INET}"
-		MASK3="${MASK}"
-		DHCP3="${DHCP}"
-		;;
-esac
+awk -f /usr/lib/setup/GetNetSettings.awk \
+	/etc/Kickstart.cfg > /tmp/NetworkSettings
+#
+rm -f /tmp/Nameservers
+for NS in $(grep -E -e '^NAMESERVER=' /tmp/NetworkSettings | \
+	cut -d '=' -f 2); do
+	printf "nameserver %s" "${NS}" >> /tmp/Nameservers
+done # for NS
+#
+if [ -e /tmp/NetworkSettings ]; then
+	cut -d ',' -f 2- /tmp/NetworkSettings > /tmp/NetworkSettings.sh
+	. /tmp/NetworkSettings.sh
+fi
+IFNAME0=${IFNAME0:-""}
+INET0=${INET0:-""}
+MASK0=${MASK0:-""}
+DHCP0=${DHCP0:-""}
+DHCPHOSTNAME0=${DHCPHOSTNAME0:-""}
+#
+IFNAME1=${IFNAME1:-""}
+INET1=${INET1:-""}
+MASK1=${MASK1:-""}
+DHCP1=${DHCP1:-""}
+DHCPHOSTNAME1=${DHCPHOSTNAME1:-""}
+#
+IFNAME2=${IFNAME2:-""}
+INET2=${INET2:-""}
+MASK2=${MASK2:-""}
+DHCP2=${DHCP2:-""}
+DHCPHOSTNAME2=${DHCPHOSTNAME2:-""}
+#
+IFNAME3=${IFNAME3:-""}
+INET3=${INET3:-""}
+MASK3=${MASK3:-""}
+DHCP3=${DHCP3:-""}
+DHCPHOSTNAME3=${DHCPHOSTNAME3:-""}
+#
+GW=${GW:-""}
 #-----------------------------------------------------------------------------------
 # TODO ~ this is really not good, since it's not universal enough.
 cat << EOP > /mnt/etc/rc.d/rc.inet1.conf
@@ -174,19 +190,14 @@ EOP
 # - Sets Nameservers info
 # - Sets hostname in /etc/hosts
 #
-
 if [ "${DHCP0}" != "yes" ]; then
-	echo "nameserver ${NS1}" > /mnt/etc/resolv.conf
+	cat /tmp/Nameservers >> /mnt/etc/resolv.conf
 	printf "%s		%s %s.%s\n" ${INET0} ${HOSTNAME} ${HOSTNAME} \
 		${DOMAIN}>> /mnt/etc/hosts
-	if [ ! -z "${NS2}" ]; then
-		echo "nameserver ${NS2}" >> /mnt/etc/resolv.conf
-	fi
 else
 	#
 	# Needed for Autoupdates & post-install.sh
-	#
 	if [ -e /etc/resolv.conf ]; then
 		cat /etc/resolv.conf > /mnt/etc/resolv.conf
-	fi
-fi
+	fi # if [ -e /etc/resolv.conf
+fi # if [ "${DHCP0}" != "yes" ]

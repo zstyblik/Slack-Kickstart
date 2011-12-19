@@ -33,27 +33,26 @@ fi
 # from pkg repository.
 #
 Create_Install_List() {
-#
-# Checks if /mnt/CHECKSUMS.md5 exists
-# and has a size greater than zero.
-#
+	# Checks if /mnt/CHECKSUMS.md5 exists and has a size greater than zero.
 	if [ ! -s /mnt/CHECKSUMS.md5 ]; then
-		echo "FATAL ERROR downloading PKG list! - Aborting."
-		echo "HINT: Check network configuration."
+		printf "FATAL ERROR downloading CHECKSUMS.md5! - Aborting.\n"
+		printf "HINT: Check network configuration.\n"
 		exit 1
 	fi
-#
-# Creates /mnt/PkgList.txt from /mnt/CHECKSUMS.md5
-#
+	if [ ! -s /tmp/taglist ]; then
+		printf "FATAL ERROR: File '/tmp/taglist' doesn't exist or is empty.\n"
+		exit 1
+	fi
+	# Creates /mnt/PkgList.txt from /mnt/CHECKSUMS.md5
 	cat /mnt/CHECKSUMS.md5 | grep -e "./slackware${LIBDIRSUFFIX}/" | \
 		grep -E -e "\.t(g|x)z$" | \
 		cut -d " " -f 3 | cut -d "/" -f 4 > /mnt/PkgList.txt
-
-#
-# Changed on 25/02/2006 to work with Taglist format
-# Taglist is retrieved from Kickstart.cfg grepping '#@' 
-#
-	for PACKAGE in $(cat /etc/Kickstart.cfg | grep -e "^#@" | grep -e 'ADD' | \
+	#
+	cat /dev/null > /mnt/usr/Download/install.list
+	#
+	# Changed on 25/02/2006 to work with Taglist format
+	# Taglist is retrieved from Kickstart.cfg grepping '#@' 
+	for PACKAGE in $(cat /tmp/taglist | grep -e "^#@" | grep -e 'ADD' | \
 		sed -e "s/: ADD//" | sed -e 's/#@//g'); do
 		#
 		# We need to know package's FILENAME, to retrieve it
@@ -64,10 +63,9 @@ Create_Install_List() {
 		DIRECTORY=$(printf "%s\n" ${PACKAGE} | cut -d "/" -f 1)
 		FILENAME=$(cat /mnt/PkgList.txt | grep -e "^${PKG}-[[:digit:]]")
 		printf "%s/%s\n" ${DIRECTORY} ${FILENAME} >> /mnt/usr/Download/install.list
-	done
+	done # for PACKAGE
 	return 0
 } # Create_Install_List
-
 #############
 # NFS Mount #
 #############
@@ -78,21 +76,15 @@ Create_Install_List() {
 # nfs:192.168.1.10:/somewhere
 #
 NFS_Mount() {
-	#
-	# Starts rpc portmapper
-	# and splits the address.
-	#
+	# Starts rpc portmapper and splits the address.
 	/sbin/rpc.portmap > $REDIR 2>&1
 
 	NFS_SERVER=$(printf "%s\n" ${1} | cut -d ":" -f 2)
 	NFS_DIR=$(printf "%s\n" ${1} | cut -d ":" -f 3)
-	#
 	# Mounts NFS PKG Repository
-	#
-	mount -o ro,rsize=8192,nolock ${NFS_SERVER}:${NFS_DIR} /var/log/mount \
-		> $REDIR 2>&1
-
-	if [ $? != 0 ];then
+	if ! mount -o ro,rsize=8192,nolock ${NFS_SERVER}:${NFS_DIR} \
+		/var/log/mount > $REDIR 2>&1 ; then
+		#
 		echo "[FAILED]"
 		printf "\nFATAL ERROR mounting '$NFS_SERVER:$NFS_DIR' - Aborting.\n"
 		printf "HINT: Check network/nfs configuration.\n"
@@ -109,43 +101,37 @@ NFS_Mount() {
 # packages from an http/ftp repository
 #
 HTTP_FTP_Install() {
-	#
-	# Downloads pkg list
-	# from choosen mirror
-	#
+	# Downloads pkg list from chosen mirror
 	printf "\n[ Using: %s ]\n" ${PACKAGE_SERVER}
 	printf "Downloading packages list ..... "
 	
 	wget "${PACKAGE_SERVER}/CHECKSUMS.md5" -O /mnt/CHECKSUMS.md5 2> ${REDIR} 
 
 	if [ $? != 0 ]; then
-		echo "[FAILED]"
-		echo
-		echo "FATAL ERROR downloading PKG list - Aborting."
-		echo "HINT: Check network configuration."
-		echo
+		printf "[FAILED]\n"
+		printf "\nFATAL ERROR downloading PKG list - Aborting.\n"
+		printf "HINT: Check network configuration.\n\n"
 		exit 1
 	else
 		echo "[OK]"
 	fi
-	#
 	# Converts tagfile to pkg filenames.
-	#
 	Create_Install_List
-	#
-	# Here we need to link /var/log/mount to
-	# /mnt/usr/Download/slackware
-	#
+	# Here we need to link /var/log/mount to /mnt/usr/Download/slackware
 	ln -s /mnt/usr/Download/slackware /var/log/mount/
 	cd /var/log/mount/slackware
-	#
 	# Downloads and installs packages.
-	#
+	if [ ! -e /mnt/usr/Download/install.list ] \
+		|| [ ! -s /mnt/usr/Download/install.list ]; then
+		printf "\nFATAL ERROR - Aborting\n"
+		printf "File '%s' doesn't exist or has zero length.\n" \
+			'/mnt/usr/Download/install.list'
+		printf "HINT: Kickstart.cfg has no taglist.\n"
+		FireBugInfo
+		exit 1
+	fi
 	for PACKAGE in $(cat /mnt/usr/Download/install.list); do
-		#
-		# Creates diskset directory, downloads package
-		# and installs it.
-		#
+		# Creates diskset directory, downloads package and installs it.
 		DISKSET=$(printf "%s\n" ${PACKAGE} | cut -d "/" -f 1)
 		if [ ! -d $DISKSET ]; then
 			mkdir "/var/log/mount/slackware/${DISKSET}"
@@ -170,8 +156,7 @@ HTTP_FTP_Install() {
 			# this is a serie and we are going to skip it silently
 			continue
 		fi
-
-		#		installpkg -infobox -root /mnt "/var/log/mount/slackware/${PACKAGE}"
+		#	installpkg -infobox -root /mnt "/var/log/mount/slackware/${PACKAGE}"
 		printf "Installing -- '%s'" "${PACKAGE}"
 		if /usr/lib/setup/installpkg --root /mnt \
 			"/var/log/mount/slackware/${PACKAGE}" >>/tmp/installpkg ; then
@@ -184,7 +169,6 @@ HTTP_FTP_Install() {
 	done # for PACKAGE
 	return 0
 } # HTTP_FTP_Install
-
 ##################
 # NFS/CD Install #
 ##################
@@ -193,20 +177,23 @@ HTTP_FTP_Install() {
 # from NFS server or CD-Rom.
 #
 NFS_CD_Install() {
-	#
 	# Converts tagfile to pkg filenames.
-	#
 	cp /var/log/mount/CHECKSUMS.md5 /mnt
-
+	#
 	Create_Install_List
 	#
-	# Installs packages on
-	# destination  dirs.
-	#
+	if [ ! -e /mnt/usr/Download/install.list ] \
+		|| [ ! -s /mnt/usr/Download/install.list ]; then
+		printf "\nFATAL ERROR - Aborting\n"
+		printf "File '%s' doesn't exist or has zero length.\n" \
+			'/mnt/usr/Download/install.list'
+		printf "HINT: Kickstart.cfg has no taglist.\n"
+		FireBugInfo
+		exit 1
+	fi
+	# Installs packages on destination dirs.
 	for PACKAGE in $(cat /mnt/usr/Download/install.list); do
-		#
 		# Installs package from NFS repository
-		#
 		if [ ! -e "/var/log/mount/slackware${LIBDIRSUFFIX}/${PACKAGE}" ]; then
 			printf "Package '%s' doesn't exist? FAILED!!!\n" ${PACKAGE}
 			continue
@@ -216,8 +203,7 @@ NFS_CD_Install() {
 			# this is a serie and we are going to skip it silently
 			continue
 		fi
-
-		#		installpkg -infobox -root /mnt "/var/log/mount/slackware/${PACKAGE}"
+		# installpkg -infobox -root /mnt "/var/log/mount/slackware/${PACKAGE}"
 		printf "Installing -- '%s'" "${PACKAGE}"
 		if /usr/lib/setup/installpkg --root /mnt \
 			"/var/log/mount/slackware${LIBDIRSUFFIX}/${PACKAGE}" \
@@ -226,10 +212,8 @@ NFS_CD_Install() {
 		else
 			echo "...[FAILED]"
 		fi
-	done
-	#
+	done # for PACKAGE
 	# umounts NFS PKG Repository
-	#
 	umount -f /var/log/mount
 	return 0
 } # NFS_CD_Install
