@@ -129,7 +129,10 @@ TAG=<[ftp|http|nfs|file]:[source]>
 * name of TAG list to use for installation
 * scripts will use basename to determine the name of taglist and then look in
 './taglist' directory when building initrd image
+* it actually is still possible to have tags in Kickstart.cfg
 * TAG lists are located in directory 'taglists/'
+* TAG list line example: '#@a/findutils: ADD'
+* TAG list line example: '#@a/floppy: SKP'
 * eg. TAG=http://domain.tld/taglists/slackware64-13.37-mini
 * eg. TAG=nfs:1.2.3.4:/taglists/slackware64-13.37-mini
 * eg. TAG=file:/etc/slackware64-13.37-mini
