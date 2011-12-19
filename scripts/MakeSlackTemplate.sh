@@ -17,13 +17,13 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 # 
 # Missing features/TODO:
-# * more than one HDD, mdadm, LVM ?
+# * more than one HDD -> pkgs for mdadm, LVM ?
 # * slackpkg
 set -e
 set -u
 
 BUSYBOXVER=${BUSYBOXVER:-'1.18.4'}
-DROPBEARVER=${DROPBEARVER:-'0.53.1'}
+DROPBEARVER=${DROPBEARVER:-''}
 LIBDIRSUFFIX=${LIBDIRSUFFIX:-''}
 IMAGEFSDIR=${IMAGEFSDIR:-'./imagefs'}
 INITRDMOUNT=${INITRDMOUNT:-'/mnt/initrd'}
@@ -144,7 +144,7 @@ parse_package()
 # DESC: show help text
 show_help() 
 {
-	echo "Usage: ${0} <CFG> <bzImage>"
+	echo "Usage: ${0} <CFG> <KERNEL_PKG|BZIMG>"
 	echo "Help haven't been written yet."
 	return 0
 } # show_help
@@ -158,7 +158,7 @@ if [ -z "${KSCONFIG}" ]; then
 fi
 
 if [ ! -e "${KSCONFIG}" ]; then
-	echo "File '${KSCONFIG}' doesn't seem to exist or not readable."
+	echo "File '${KSCONFIG}' doesn't seem to exist or not readable." 1>&2
 	exit 1
 fi
 . "${KSCONFIG}"
@@ -172,20 +172,41 @@ if [ -z "${BZIMG}" ]; then
 fi
 
 if [ ! -e "${BZIMG}" ]; then
-	echo "File '${BZIMG}' doesn't seem to exist or not readable."
+	echo "File '${BZIMG}' doesn't seem to exist or not readable." 1>&2
 	exit 1
 fi
+# If $DROPBEARVER is not set, try figure out the latest from the Web
+if [ -z "${DROPBEARVER}" ]; then
+	DROPBEARVER=$(wget http://matt.ucc.asn.au/dropbear/ -O - 2>/dev/null | \
+	awk -F'>' '{ \
+	if ($0 !~ /dropbear-.*\.tar\.bz2/) { next } \
+	ibegin = index($0, "href=\"dropbear-"); \
+	part = substr($0, ibegin+6); \
+	iend = index(part, ".tar.bz2"); \
+	if (ibegin == 0 || iend == 0) { next } \
+	part = substr(part, 0, iend-1); \
+	print part; \
+}')
+	if [ -z "${DROPBEARVER}" ]; then
+		printf "Unable to determine Dropbear version." 1>&2
+		exit 1
+	fi # if [ -z "${DROPBEARVER}" ]
+fi # if [ -z "${DROPBEARVER}" ]
+if [ ! -e "${TMPDIR}/${DROPBEARVER}.tar.bz2" ]; then
+	wget "http://matt.ucc.asn.au/dropbear/${DROPBEARVER}.tar.bz2" \
+		-O "${TMPDIR}/${DROPBEARVER}.tar.bz2"
+fi # if [ ! -e "${TMPDIR}/${DROPBEARVER}.tar.bz2" ]
 
 # Housekeeping...
 if mount | grep -q -e "${INITRDMOUNT}" ; then
-	echo "Initrd dir '${INITRDMOUNT}' already mounted."
+	echo "Initrd dir '${INITRDMOUNT}' already mounted." 1>&2
 	exit 1
 fi
 
 CWD=$(pwd)
 if [ ! -d "${IMAGEFSDIR}" ]; then
 	if [ ! -d "../${IMAGEFSDIR}" ]; then
-		echo "I couldn't locate './imagefs' neither '../imagefs' dir"
+		echo "I couldn't locate './imagefs' neither '../imagefs' dir" 1>&2
 		exit 1
 	else
 		IMAGEFSDIR="../${IMAGEFSDIR}"
@@ -197,7 +218,32 @@ if [ -d "${SLACKCDPATH}/slackware" ]; then
 elif [ -d "${SLACKCDPATH}/slackware64" ]; then
 	LIBDIRSUFFIX=64
 else
-	echo "No '${SLACKCDPATH}/slackware' nor '${SLACKCDPATH}/slackware64' found."
+	echo "No '${SLACKCDPATH}/slackware' nor '${SLACKCDPATH}/slackware64' found." \
+		1>&2
+	exit 1
+fi
+# Note: hope the following is sufficient for 98% of cases.
+BZIMGTYPE=$(file "${BZIMG}")
+KERNELVER=""
+if printf "%s" "${BZIMGTYPE}" | grep -q -e 'XZ' -e 'gzip' ; then
+	rm -rf "${TMPDIR}/slack-kernel"
+	mkdir "${TMPDIR}/slack-kernel"
+	BZIMGPATH=$(pwd "${BZIMG}")
+	BZIMGPATH="${BZIMGPATH}/${BZIMG}"
+	pushd "${TMPDIR}/slack-kernel"
+	explodepkg "${BZIMGPATH}"
+	KERNELVER=$(find ./ -name vmlinuz* | xargs strings | \
+		grep -E -e '^(2|3)\.[0-9]+(\.[0-9]+(\.[0-9]+))' | awk '{ print $1 }')
+	popd
+elif printf "%s" "${BZIMGTYPE}" | grep -q -e 'Linux kernel' ; then
+	KERNELVER=$(strings "${BZIMG}" | \
+		grep -E -e '^(2|3)\.[0-9]+(\.[0-9]+(\.[0-9]+))' | awk '{ print $1 }')
+else
+	printf "bzImage '%s' has invalid/unsupported format.\n" "${BZIMG}" 1>&2
+	exit 1
+fi
+if [ -z "${KERNELVER}" ]; then
+	printf "Failed to determine kernel version.\n" 1>&2
 	exit 1
 fi
 
@@ -235,7 +281,7 @@ mkdir "${INITRDMOUNT}/var/run"
 mkdir "${INITRDMOUNT}/var/tmp"
 mkdir "${INITRDMOUNT}/var/log/mount"
 
-#### BUSYBOX ####
+#### BUSYBOX
 # Grab busybox and create the symbolic links
 pushd "${INITRDMOUNT}"
 cp "${TMPDIR}/busybox-${BUSYBOXVER}/busybox" ./bin/
@@ -243,11 +289,10 @@ getlibs bin/busybox
 for CMD in $(./bin/busybox --list-ful); do
 	CMDDIR=$(dirname "${CMD}")
 	if [ ! -d "${CMDDIR}" ]; then
-		mkdir -p "./${CMDDIR}" || \
-			{
-				echo "Unable to create dir '${CMDDIR}'"
-				exit 253
-			}
+		if ! mkdir -p "./${CMDDIR}" ; then
+			printf "Unable to create dir '%s'\n" "${CMDDIR}" 1>&2
+			exit 253
+		fi
 	fi
 	ln -s /bin/busybox "./${CMD}"
 done
@@ -266,71 +311,48 @@ cp -adpR /dev/mem "${INITRDMOUNT}/dev"
 cp -adpR /dev/null "${INITRDMOUNT}/dev"
 mkdir "${INITRDMOUNT}/dev/pts"
 mkdir "${INITRDMOUNT}/dev/shm"
-# udhcpc
+#### udhcpc
 mkdir -p "${INITRDMOUNT}/etc/udhcpc" || true
 cp "${IMAGEFSDIR}/etc/udhcpc/default.script" \
 	${INITRDMOUNT}/etc/udhcpc/default.script
 chmod +x ${INITRDMOUNT}/etc/udhcpc/default.script
 #### Kernel modules
-# TODO: megaTodo - which modules, how-to determine version etc.
-# A: external file as a list of modules to copy including "paths"
-KERNELVER=$(strings "${BZIMG}" | \
-	grep -E -e '^(2|3)\.[0-9]+(\.[0-9]+(\.[0-9]+))' | awk '{ print $1 }')
 KERNELVERNO=$(printf "%s\n" ${KERNELVER} | awk -F'-' '{ print $1 }')
 KERNELSUFFIX=$(printf "%s\n" ${KERNELVER} | awk -F'-' '{ print $2 }')
-KMODPATH="${TMPDIR}/slack-kmodules/lib/modules/2.6.37.6"
+KMODPATH="${TMPDIR}/slack-kmodules/lib/modules/${KERNELVER}"
 KMODCPTO="${INITRDMOUNT}/lib/modules/${KERNELVER}"
 KMODSPKGSTR="kernel-modules-${KERNELVERNO}"
 if [ ! -z "${KERNELSUFFIX}" ]; then
 	KMODSPKGSTR="kernel-modules-${KERNELSUFFIX}-${KERNELVERNO}"
 fi
-KMODULESPKG=$(parse_package "${KMODSPKGSTR}")
-rm -rf "${TMPDIR}/slack-kmodules"
-mkdir "${TMPDIR}/slack-kmodules/"
-cd "${TMPDIR}/slack-kmodules"
-explodepkg "${KMODULESPKG}" 1>/dev/null
-#
-mkdir -p "${KMODCPTO}/kernel"
-cp -apr ${KMODPATH}/modules.* "${KMODCPTO}/"
-# Filesystems
-mkdir "${KMODCPTO}/kernel/fs/"
-for FS in btrfs jfs ext2 ext3 ext4 reiserfs xfs; do
-	cp -apr "${KMODPATH}/kernel/fs/${FS}" "${KMODCPTO}/kernel/fs/" || true
-done # for FS
-# Block devs
-mkdir -p "${KMODCPTO}/kernel/drivers/block"
-cp -apr "${KMODPATH}/kernel/drivers/block/virtio_blk.ko" \
-	"${KMODCPTO}/kernel/drivers/block/" || true
-# Char devs
-mkdir -p "${KMODCPTO}/kernel/drivers/char"
-cp -apr "${KMODPATH}/kernel/drivers/char/virtio_console.ko" \
-	"${KMODCPTO}/kernel/drivers/char/" || true
-# Input devs
-mkdir -p "${KMODCPTO}/kernel/drivers/input/serio"
-for SER in serio_raw.ko serport.ko; do
-	cp -apr "${KMODPATH}/kernel/drivers/input/serio/${SER}" \
-		"${KMODCPTO}/kernel/drivers/input/serio/"
-done # for SER
-# Net devs
-mkdir -p "${KMODCPTO}/kernel/drivers/net/"
-for NETMOD in 8139cp.ko 8139too.ko 3c59x.ko e100.ko e1000 e1000e tun.ko \
-	virtio_net.ko; do
-	cp -apr "${KMODPATH}/kernel/drivers/net/${NETMOD}" \
-		"${KMODCPTO}/kernel/drivers/net/" || true
-done # for NETMOD
-# TODO ~ USB modules ?
-# VirtiIO acc
-cp -apr "${KMODPATH}/kernel/drivers/vhost" \
-	"${KMODCPTO}/kernel/drivers/vhost" || true
-cp -apr "${KMODPATH}/kernel/drivers/virtio" \
-	"${KMODCPTO}/kernel/drivers/" || true
-#
-cp "etc/rc.d/rc.modules-${KERNELVERNO}.new" \
-	"${INITRDMOUNT}/etc/rc.d/rc.modules" || true
-pushd "${INITRDMOUNT}"
-depmod -b ./ "${KERNELVERNO}"
-popd
-
+BZIMGDIR=$(dirname "${BZIMG}")
+KMODULESPKG=$(find "${BZIMGDIR}" -name "${KMODSPKGSTR}")
+if [ -z "${KMODULESPKG}" ]; then
+	# Try to find kernel-modules package on CD-ROM/wherever
+	KMODULESPKG=$(parse_package "${KMODSPKGSTR}")
+	if [ -z "${KMODULESPKG}" ]; then
+		printf "Failed to locate '%s' package.\n" "${KMODSPKGSTR}" 1>&2
+		exit 1
+	fi # if [ -z "${KMODULESPKG}" ]
+else
+	BZIMGPATH=$(pwd "${BZIMG}")
+	KMODULESPKG="${BZIMGPATH}/${KMODULESPKG}"
+fi # if [ -z "${KMODULESPKG}" ]
+# External file with get_kmodules() which does all cp of kernel modules.
+if [ -e "${BZIMGDIR}/modules.sh" ]; then
+	. "${BZIMGDIR}/modules.sh"
+	rm -rf "${TMPDIR}/slack-kmodules"
+	mkdir "${TMPDIR}/slack-kmodules/"
+	cd "${TMPDIR}/slack-kmodules"
+	explodepkg "${KMODULESPKG}" 1>/dev/null
+	#
+	get_kmodules
+	pushd "${INITRDMOUNT}"
+	depmod -b ./ "${KERNELVERNO}"
+	popd
+else
+	printf "No kernel modules will be copied to INITRD."
+fi # if [ -e "${BZIMGDIR}/modules.sh" ]
 #### udev
 UDEVPKG=$(parse_package 'udev-')
 if [ ! -z "${UDEVPKG}" ]; then
@@ -380,46 +402,9 @@ if [ ! -z "${GLIBCSOPKG}" ]; then
 	cp -apr ./lib${LIBDIRSUFFIX}/incoming/* "${INITRDMOUNT}/lib${LIBDIRSUFFIX}/"
 	cp -apr ${TMPDIR}/slack-glibc-solibs/lib${LIBDIRSUFFIX}/libSegFault.so \
 		"${INITRDMOUNT}/lib${LIBDIRSUFFIX}/"
-	cat > "${INITRDMOUNT}/mydoinst.sh" <<EOF
-( cd lib${LIBDIRSUFFIX} ; rm -rf libnss_nis.so.2 )
-( cd lib${LIBDIRSUFFIX} ; ln -sf libnss_nis-2.13.so libnss_nis.so.2 )
-( cd lib${LIBDIRSUFFIX} ; rm -rf libm.so.6 )
-( cd lib${LIBDIRSUFFIX} ; ln -sf libm-2.13.so libm.so.6 )
-( cd lib${LIBDIRSUFFIX} ; rm -rf libnss_files.so.2 )
-( cd lib${LIBDIRSUFFIX} ; ln -sf libnss_files-2.13.so libnss_files.so.2 )
-( cd lib${LIBDIRSUFFIX} ; rm -rf libresolv.so.2 )
-( cd lib${LIBDIRSUFFIX} ; ln -sf libresolv-2.13.so libresolv.so.2 )
-( cd lib${LIBDIRSUFFIX} ; rm -rf libnsl.so.1 )
-( cd lib${LIBDIRSUFFIX} ; ln -sf libnsl-2.13.so libnsl.so.1 )
-( cd lib${LIBDIRSUFFIX} ; rm -rf libutil.so.1 )
-( cd lib${LIBDIRSUFFIX} ; ln -sf libutil-2.13.so libutil.so.1 )
-( cd lib${LIBDIRSUFFIX} ; rm -rf libnss_compat.so.2 )
-( cd lib${LIBDIRSUFFIX} ; ln -sf libnss_compat-2.13.so libnss_compat.so.2 )
-( cd lib${LIBDIRSUFFIX} ; rm -rf libthread_db.so.1 )
-( cd lib${LIBDIRSUFFIX} ; ln -sf libthread_db-1.0.so libthread_db.so.1 )
-( cd lib${LIBDIRSUFFIX} ; rm -rf libnss_hesiod.so.2 )
-( cd lib${LIBDIRSUFFIX} ; ln -sf libnss_hesiod-2.13.so libnss_hesiod.so.2 )
-( cd lib${LIBDIRSUFFIX} ; rm -rf libanl.so.1 )
-( cd lib${LIBDIRSUFFIX} ; ln -sf libanl-2.13.so libanl.so.1 )
-( cd lib${LIBDIRSUFFIX} ; rm -rf libcrypt.so.1 )
-( cd lib${LIBDIRSUFFIX} ; ln -sf libcrypt-2.13.so libcrypt.so.1 )
-( cd lib${LIBDIRSUFFIX} ; rm -rf libBrokenLocale.so.1 )
-( cd lib${LIBDIRSUFFIX} ; ln -sf libBrokenLocale-2.13.so libBrokenLocale.so.1 )
-( cd lib${LIBDIRSUFFIX} ; rm -rf ld-linux-x86-64.so.2 )
-( cd lib${LIBDIRSUFFIX} ; ln -sf ld-2.13.so ld-linux-x86-64.so.2 )
-( cd lib${LIBDIRSUFFIX} ; rm -rf libdl.so.2 )
-( cd lib${LIBDIRSUFFIX} ; ln -sf libdl-2.13.so libdl.so.2 )
-( cd lib${LIBDIRSUFFIX} ; rm -rf libnss_dns.so.2 )
-( cd lib${LIBDIRSUFFIX} ; ln -sf libnss_dns-2.13.so libnss_dns.so.2 )
-( cd lib${LIBDIRSUFFIX} ; rm -rf libpthread.so.0 )
-( cd lib${LIBDIRSUFFIX} ; ln -sf libpthread-2.13.so libpthread.so.0 )
-( cd lib${LIBDIRSUFFIX} ; rm -rf libnss_nisplus.so.2 )
-( cd lib${LIBDIRSUFFIX} ; ln -sf libnss_nisplus-2.13.so libnss_nisplus.so.2 )
-( cd lib${LIBDIRSUFFIX} ; rm -rf libc.so.6 )
-( cd lib${LIBDIRSUFFIX} ; ln -sf libc-2.13.so libc.so.6 )
-( cd lib${LIBDIRSUFFIX} ; rm -rf librt.so.1 )
-( cd lib${LIBDIRSUFFIX} ; ln -sf librt-2.13.so librt.so.1 )
-EOF
+	# There is no ldconfig; get symlinks from post-install script then
+	grep -E -e 'ln -sf' -e 'rm -rf [A-Za-z0-9]+' \
+		install/doinst.sh > "${INITRDMOUNT}/mydoinst.sh"
 	pushd "${INITRDMOUNT}"
 	sh mydoinst.sh
 	rm -f mydoinst.sh
@@ -453,12 +438,9 @@ if [ ! -z "${MODULEINITPKG}" ]; then
 fi # if MODULEINITPKG
 #### Dropbear
 cd "${TMPDIR}"
-if [ ! -e "dropbear-${DROPBEARVER}.tar.bz2" ]; then
-	wget "http://matt.ucc.asn.au/dropbear/dropbear-${DROPBEARVER}.tar.bz2"
-fi
-rm -rf "dropbear-${DROPBEARVER}"
-tar -jxf "dropbear-${DROPBEARVER}.tar.bz2"
-cd "dropbear-${DROPBEARVER}"
+rm -rf "${DROPBEARVER}"
+tar -jxf "${DROPBEARVER}.tar.bz2"
+cd "${DROPBEARVER}"
 ./configure --prefix=/usr 2>&1 >/dev/null || exit 101
 make 2>&1 >/dev/null || exit 102
 make install DESTDIR="${INITRDMOUNT}" 2>&1 >/dev/null || exit 103
@@ -478,7 +460,7 @@ cd /usr/lib/setup
 ./setup
 EOF
 chmod +x ./usr/sbin/setup
-#
+#### Encrypted password
 sed -r -e "s#^PASSWD=.*\$#PASSWD='${PASSWDENC}'#" \
 	"${CWD}/${KSCONFIG}" > etc/Kickstart.cfg
 # makedevs.sh is being copied from imagefs dir
@@ -683,14 +665,15 @@ if [ ! -z "${NTPPKG}" ]; then
 	cd ${TMPDIR}
 	rm -rf "${TMPDIR}/slack-ntp"
 fi # if $NTPPKG
-#### Finish up...
+### Finish up...
+#### Set TZ
 cp -pr ${CWD}/${IMAGEFSDIR}/* "${INITRDMOUNT}/"
 if [ -e "/usr/share/zoneinfo/${TIMEZONE}" ]; then
 	echo "Configuring TZ settings"
 	cat "/usr/share/zoneinfo/${TIMEZONE}" > "${INITRDMOUNT}/etc/localtime"
 fi
 chmod +x ${INITRDMOUNT}/etc/rc.d/rc.*
-# SSH keys
+#### SSH keys
 if [ -e "${CWD}/config-files/authorized_keys" ]; then
 	printf "Getting SSH keys\n"
 	mkdir -p "${INITRDMOUNT}/root/.ssh/"
@@ -699,7 +682,6 @@ if [ -e "${CWD}/config-files/authorized_keys" ]; then
 	cp "${CWD}/config-files/authorized_keys" "${INITRDMOUNT}/root/.ssh/"
 	chmod 400 "${INITRDMOUNT}/root/.ssh/" "${INITRDMOUNT}/etc/dropbear/"
 fi
-
 #### passwords
 printf "Altering passwords.\n"
 pushd "${INITRDMOUNT}"
@@ -715,13 +697,17 @@ popd
 if [ -d "${CWD}/pre-install/" ]; then
 	printf "Copying pre-installation scripts.\n"
 	mkdir -p ${INITRDMOUNT}/etc/pre-install || true
-	cp -r ${CWD}/pre-install/* ${INITRDMOUNT}/etc/pre-install/
+	for PRESCRIPT in $(ls "${CWD}/pre-install/"); do
+		cp -r "${CWD}/pre-install/${PRESCRIPT}" "${INITRDMOUNT}/etc/pre-install/"
+	done
 fi
 #### post-installation scripts
 if [ -d "${CWD}/post-install/" ]; then
 	printf "Copying post-installation scripts.\n"
 	mkdir -p ${INITRDMOUNT}/etc/post-install || true
-	cp -r ${CWD}/post-install/* ${INITRDMOUNT}/etc/post-install/
+	for POSTSCRIPT in $(ls "${CWD}/post-install/"); do
+		cp -r "${CWD}/post-install/${POSTSCRIPT}" "${INITRDMOUNT}/etc/post-install/"
+	done
 fi
 #### chown root:root everything
 find "${INITRDMOUNT}" ! -user root ! -group root | xargs chown root:root
@@ -731,3 +717,4 @@ umount "${INITRDMOUNT}"
 gzip -9 "${TMPDIR}/ramdisk.img"
 RDISKNAME=$(basename "${KSCONFIG}" .cfg)
 mv "${TMPDIR}/ramdisk.img.gz" "${CWD}/rootdisks/${RDISKNAME}.gz"
+# EOF

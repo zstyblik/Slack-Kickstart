@@ -18,25 +18,25 @@
 # 
 # Tag2List.sh
 #
-help()
+print_help()
 {
 	printf "#\n# Converts Slackware tagfiles in taglist format:\n"
 	printf "#\n# Usage: %s tagfiles/tag-file\n#\n" ${0}
 	printf "# Example: to convert mini-tag Tagfile\n"
 	printf "# %s tagfiles/mini-tag \n#\n" ${0}
 	return 0
-} # help()
+} # print_help()
 
 FILEIN=${1:-'None'}
 
 if [ $# -ne 1 ]; then
-	help
+	print_help
 	exit 1
 fi
 
 if [ "${FILEIN}" = "None" ] || [ ! -f "${FILEIN}" ]; then
 	printf "#\n# Tagfile either doesn't exist or is not set.\n"
-	help
+	print_help
 	exit 1
 fi
 

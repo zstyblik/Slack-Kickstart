@@ -146,7 +146,6 @@ if [ $# -eq 3 ]; then
 
 	if [ "${PKG_REP}" = "cdrom" ]; then
 		SLACKCD=${3:-''}
-		TAG=$(grep -e 'TAG' "./config-files/${HOST}.cfg" | -e sed 's/TAG=//g')
 		if [ ! -e "${SLACKCD}/CHECKSUMS.md5" ]; then
 			printf "\nCannot find Slackware CD on '%s' - Aborting\n\n" ${SLACKCD}
 			exit 1
@@ -166,12 +165,25 @@ if [ $# -eq 3 ]; then
 		mkdir "${ISODIR}/slackware${LIBDIRSUFFIX}"
 		cp "${SLACKCD}/CHECKSUMS.md5" "${ISODIR}"
 	
-		for PACKAGE in $(grep -v -e '^#' "./taglists/${TAG}" | cut -d ":" -f 1); do
+		TAG=$(grep -e 'TAG' "./config-files/${HOST}.cfg" | -e sed 's/TAG=//g')
+		TAGGET=$(printf "%s" "${TAG}" | cut -d ':' -f 1)
+		TAGSRC=$(printf "%s" "${TAG}" | cut -d ':' -f 2-)
+		TAGFILE=$(basename "${TAGSRC}")
+		if [ "${TAGGET}" != 'file' ]; then
+			printf "WARNING - TAG list get method should be 'file', not '%s'.\n" \
+				"${TAGGET}"
+		fi
+		if [ ! -s "./taglists/${TAGFILE}" ]; then
+			printf "FATAL ERROR - File './taglists/%s' doesn't seem to exist.\n" \
+				"${TAGFILE}"
+			exit 1
+		fi
+		for PACKAGE in $(grep -v -e '^#' "./taglists/${TAGFILE}" | \
+			cut -d ":" -f 1); do
 			DISKSET=$(printf "%s\n" ${PACKAGE} | cut -d "/" -f 1)
 			if [ ! -d "${ISODIR}/slackware${LIBDIRSUFFIX}/${DISKSET}" ]; then
 				mkdir "${ISODIR}/slackware${LIBDIRSUFFIX}/${DISKSET}"
-				echo
-				printf "Copying packages for diskset [ %s ] " "${DISKSET}"
+				printf "\nCopying packages for diskset [ %s ] " "${DISKSET}"
 			fi
 			printf "."
 			cp ${SLACKCD}/slackware${LIBDIRSUFFIX}/${PACKAGE}*.t?z \

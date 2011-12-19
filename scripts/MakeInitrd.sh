@@ -23,15 +23,16 @@
 set -e
 set -u
 
+# Ramdisk Constants
+RDSIZE=${RDSIZE:-65536}
+
 show_help()
 {
-	echo
-	echo "Usage: ${0} <config-file> <bzImage> <template>"
+	printf "\nUsage: %s <config-file> <bzImage> <template>\n\n" "${0}"
 #	echo "Example: ${0} \
 #		config-files/sample.cfg \
 #		kernels/huge.s/bzImage \
 #		templates/tmpl-slackware-10.2.gz"
-	echo
 	return 0
 } # show_help
 #########
@@ -50,35 +51,27 @@ if [ -z "${CFGFILE}" ] || [ -z "${TMPLFILE}" ] || [ -z "${KERNEL}" ]; then
 	exit 1
 fi
 if [ ! -f "${CFGFILE}" ]; then
-	echo
-	echo "Cannot find config file: '${CFGFILE}'!"
-	echo
+	printf "\nCannot find config file: '%s'!\n\n" "${CFGFILE}"
 	exit 1
 fi
 if [ ! -f "${TMPLFILE}" ]; then
-	echo
-	echo "Cannot find template image '${TMPLFILE}'!"
+	printf "\nCannot find template image '%s'!\n" "${TMPLFILE}"
 	show_help
 	exit 1
 fi
 if [ ! -f "${KERNEL}" ]; then
-	echo
-	echo "Cannot find bzImage '${KERNEL}'!"
+	printf "\nCannot find bzImage '%s'!\n" "${KERNEL}"
 	show_help
 	exit 1
 fi
 # Tool check
 if [ $(whoami) != "root" ]; then
-	echo
-	echo "You must exec ${0} as root"
-	echo
+	printf "\nYou must exec %s as root\n\n" "${0}"
 	exit 1
 fi
-if [ ! $(which openssl) ]; then
-	echo
-	echo "Cannot find openssl binary!"
-	echo "Please install openssl package."
-	echo
+if ! which openssl &>/dev/null ; then
+	printf "\nCannot find openssl binary!\n"
+	printf "\nPlease install openssl package.\n\n"
 	exit 1
 fi
 # Directories check
@@ -93,8 +86,7 @@ clear
 
 HOST=$(basename "${CFGFILE}" '.cfg')
 if [ ! -f "./config-files/${HOST}.cfg" ]; then
-	echo "Cannot find config file: './config-files/${HOST}.cfg'."
-	echo
+	printf "Cannot find config file: './config-files/%s.cfg'.\n\n" "${HOST}"
 	exit 1
 fi
 . "./config-files/${HOST}.cfg"
@@ -130,14 +122,12 @@ gunzip "${HOST}.gz" \
 sleep 2
 # Mounting root image in loopback on mount directory
 printf "Mounting initrd image..."
-if mount -o loop "${HOST}" mount > /dev/null 2>&1 ; then
+if mount -o loop "${HOST}" ./mount > /dev/null 2>&1 ; then
 	printf "\t[ OK ]\n"
 else
 	rm "${HOST}"
 	printf "\t[FAILED]\n"
-	echo
-	echo "Error mounting initrd image - Aborting!"
-	echo
+	printf "\nError mounting initrd image - Aborting!\n\n"
 	exit 1
 fi
 #################
@@ -156,26 +146,31 @@ sed -e "s@${PASSWD}@\'${ENCRYPTED}\'@" "config-files/${HOST}.cfg" \
 # on top of scripts.
 #----------------------------------------------------------
 TAG=${TAG:-''}
-
-printf "Getting TAG list..."
-if [ -z "${TAG}" ] || [ ! -e "./taglists/${TAG}" ]; then
-	printf "\t\t[ FAIL ]\n"
-	printf "TAG list empty or does not exist.\n"
+TAGGETTYPE=$(printf "%s" "${TAG}" | cut -d ':' -f 1)
+TAGFILE=$(basename "${TAG}")
+if [ "$(printf "%s" "${TAG}" | cut -d ':' -f 1)" = 'file' ]; then
+	printf "Copying TAG list '%s' ..." "${TAGFILE}"
+	if [ -z "${TAGFILE}" ] || [ ! -e "./taglists/${TAGFILE}" ]; then
+		printf "\t\t[ FAIL ]\n"
+		printf "TAG list empty or does not exist.\n"
+	else
+		printf "#\n# Taglist: %s\n#" "${TAGFILE}" >> mount/etc/Kickstart.cfg
+		grep -v -E -e "^#" "./taglists/${TAGFILE}" | \
+			awk '{ printf "#@%s\n", $0 }' >> mount/etc/Kickstart.cfg
+		printf "# END of Taglist: %s" "${TAGFILE}" >> mount/etc/Kickstart.cfg
+		printf "\t\t[ OK ]\n"
+	fi # if [ -z "${TAGFILE}" ] || ...
 else
-	printf "#\n# Taglist: %s\n#" "${TAG}" >> mount/etc/Kickstart.cfg
-	grep -v -E -e "^#" "./taglists/${TAG}" | \
-		awk '{ printf "#@%s\n", $0 }' >> mount/etc/Kickstart.cfg
-	printf "# END of Taglist: %s" $TAG >> mount/etc/Kickstart.cfg
-	printf "\t\t[ OK ]\n"
-fi
+	printf "TAG list skipped.\n"
+fi # if [ "$(printf ... ]
 # SSH keys
 printf "Getting SSH keys..."
 if [ -e "config-files/authorized_keys" ]; then
-	mkdir -p "${INITRDMOUNT}/root/.ssh/"
-	mkdir -p "${INITRDMOUNT}/etc/dropbear/"
-	cp "config-files/authorized_keys" "${INITRDMOUNT}/etc/dropbear/"
-	cp "config-files/authorized_keys" "${INITRDMOUNT}/root/.ssh/"
-	chmod 400 "${INITRDMOUNT}/root/.ssh/" "${INITRDMOUNT}/etc/dropbear/"
+	mkdir -p "mount/root/.ssh/"
+	mkdir -p "mount/etc/dropbear/"
+	cp "config-files/authorized_keys" "mount/etc/dropbear/"
+	cp "config-files/authorized_keys" "mount/root/.ssh/"
+	chmod 400 "mount/root/.ssh/" "mount/etc/dropbear/"
 	printf "\t\t[ OK ]\n"
 else
 	printf "\t\t[ FAIL ]\n"
@@ -187,6 +182,9 @@ cp "/usr/share/zoneinfo/${TIMEZONE}" mount/etc/localtime
 ##########
 # Kernel #
 ##########
+if [ ! -d mount/kernel ]; then
+	mkdir mount/kernel
+fi
 cp "${KERNEL}" mount/kernel/
 #------------------------------------------
 # Creates the root image
@@ -232,7 +230,7 @@ image = /boot/${KNAME}
   root = /dev/ram0
   label = Kickstart
   initrd = /boot/${HOST}.gz
-  ramdisk = 49152
+  ramdisk = ${RDSIZE}
   append = "panic=5"
 
 #
@@ -258,7 +256,7 @@ default Kickstart
 prompt 0
 label Kickstart
  kernel ${KNAME}
- append initrd=${HOST}.gz devfs=nomount load_ramdisk=1 prompt_ramdisk=0 ramdisk_size=16384 rw root=/dev/ram
+ append initrd=${HOST}.gz devfs=nomount load_ramdisk=1 prompt_ramdisk=0 ramdisk_size=${RDSIZE} rw root=/dev/ram
 
 # Remember to upload kernel and initrd image into
 # your tftp server with something like:
@@ -280,3 +278,4 @@ fi # if INSTALL_TYPE cdrom
 # initrd image
 #
 chown ${USER}:${GROUP} "./rootdisks/${HOST}.gz"
+# EOF
