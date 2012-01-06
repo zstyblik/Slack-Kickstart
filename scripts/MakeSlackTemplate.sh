@@ -22,7 +22,9 @@
 set -e
 set -u
 
-BUSYBOXVER=${BUSYBOXVER:-'1.18.4'}
+# Note: http://www.busybox.net/downloads/binaries/latest/
+# or provide busybox Slackware package eg. build from SBo
+BUSYBOXFILE=${BUSYBOXFILE:-'/tmp/busybox-x86_64 '}
 DROPBEARVER=${DROPBEARVER:-''}
 LIBDIRSUFFIX=${LIBDIRSUFFIX:-''}
 IMAGEFSDIR=${IMAGEFSDIR:-'./imagefs'}
@@ -174,7 +176,12 @@ fi
 if [ ! -e "${BZIMG}" ]; then
 	echo "File '${BZIMG}' doesn't seem to exist or not readable." 1>&2
 	exit 1
-fi
+fi # if [ ! -e "${BZIMG}" ]
+if [ ! -e "${BUSYBOXFILE}" ]; then
+	printf "Busybox not found '%s'.\n" "${BUSYBOXFILE}"
+	printf "Busybox is mandatory. Unable to continue.\n"
+	exit 1
+fi # if [ ! -e "${BZIMG}" ]
 # If $DROPBEARVER is not set, try figure out the latest from the Web
 if [ -z "${DROPBEARVER}" ]; then
 	DROPBEARVER=$(wget http://matt.ucc.asn.au/dropbear/ -O - 2>/dev/null | \
@@ -282,9 +289,19 @@ mkdir "${INITRDMOUNT}/var/tmp"
 mkdir "${INITRDMOUNT}/var/log/mount"
 
 #### BUSYBOX
+if printf "%s" "${BUSYBOXFILE}" | grep -q -E -e '\.t(g|x)z$' ; then
+	printf "Copying Busybox from package '%s'.\n" "${BUSYBOXFILE}"
+	rm -rf "${TMPDIR}/busybox"
+	mkdir "${TMPDIR}/busybox"
+	cd "${TMPDIR}/busybox"
+	explodepkg "${BUSYBOXFILE}" 1>/dev/null
+	cp ./busybox "${INITRDMOUNT}/bin/"
+else
+	printf "Copying Busybox from file '%s'.\n" "${BUSYBOXFILE}"
+	cp "${BUSYBOXFILE}" "${INITRDMOUNT}/bin/"
+fi # 
 # Grab busybox and create the symbolic links
 pushd "${INITRDMOUNT}"
-cp "${TMPDIR}/busybox-${BUSYBOXVER}/busybox" ./bin/
 getlibs bin/busybox
 for CMD in $(./bin/busybox --list-ful); do
 	CMDDIR=$(dirname "${CMD}")
