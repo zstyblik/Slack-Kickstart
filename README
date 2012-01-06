@@ -31,6 +31,7 @@ REQUIREMENTS:
 - syslinux (Needed to create Iso & PXE images).
 - cdrtools (as above).
 - openssl (Needed to encrypt the root's password).
+- busybox (Needed to create templates).
 
 
 LICENSE:
