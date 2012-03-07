@@ -82,12 +82,11 @@ cat << EOF1 > /mnt/etc/lilo.conf
 # Start LILO global section
 boot = ${BOOTDEV}
 EOF1
-# FIX/Workaround to boot from VirtIO disks
-for VDD in $(cut -d ':' -f 1 /tmp/Partitions | \
-	grep -E -e '/dev/vd[a-z]+' | sort | uniq); do
+
+# FIX/Workaround to boot from VirtIO disk
+if printf "%s" "${BOOTDEV}" | grep -q -E -e '/dev/vd[a-z]+'; then
 	printf "disk=${VDD} bios=0x80 max-partitions=7\n" >> /mnt/etc/lilo.conf
-	cp -apr ${VDD}* /mnt/dev/
-done # for VDD
+fi
 
 cat << EOF2 >> /mnt/etc/lilo.conf
 lba32
