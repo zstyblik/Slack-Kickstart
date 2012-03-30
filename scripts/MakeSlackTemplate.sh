@@ -22,12 +22,17 @@
 set -e
 set -u
 
+CWD=$(dirname "$0")
+if [ "${CWD}" = '.' ]; then
+	CWD=$(pwd)
+fi
+
 # Note: http://www.busybox.net/downloads/binaries/latest/
 # or provide busybox Slackware package eg. build from SBo
 BUSYBOXFILE=${BUSYBOXFILE:-'/tmp/busybox-x86_64 '}
 DROPBEARVER=${DROPBEARVER:-''}
 LIBDIRSUFFIX=${LIBDIRSUFFIX:-''}
-IMAGEFSDIR=${IMAGEFSDIR:-'./imagefs'}
+IMAGEFSDIR=${IMAGEFSDIR:-"${CWD}/../imagefs"}
 INITRDMOUNT=${INITRDMOUNT:-'/mnt/initrd'}
 SLACKCDPATH=${SLACKCDPATH:-'/mnt/cdrom/'}
 TMPDIR=${TMPDIR:-'/tmp'}
@@ -152,7 +157,6 @@ show_help()
 } # show_help
 
 ### MAIN ###
-CWD=${PWD}
 KSCONFIG=${1:-''}
 if [ -z "${KSCONFIG}" ]; then
 	show_help
@@ -193,16 +197,16 @@ if [ -z "${DROPBEARVER}" ]; then
 	if (ibegin == 0 || iend == 0) { next } \
 	part = substr(part, 0, iend-1); \
 	print part; \
-}')
+}' | sort | tail -n 1 | cut -d '-' -f 2-)
 	if [ -z "${DROPBEARVER}" ]; then
-		printf "Unable to determine Dropbear version." 1>&2
+		printf "Unable to determine Dropbear version.\n" 1>&2
 		exit 1
 	fi # if [ -z "${DROPBEARVER}" ]
 fi # if [ -z "${DROPBEARVER}" ]
-if [ ! -e "${TMPDIR}/${DROPBEARVER}.tar.bz2" ]; then
-	wget "http://matt.ucc.asn.au/dropbear/${DROPBEARVER}.tar.bz2" \
-		-O "${TMPDIR}/${DROPBEARVER}.tar.bz2"
-fi # if [ ! -e "${TMPDIR}/${DROPBEARVER}.tar.bz2" ]
+if [ ! -e "${TMPDIR}/dropbear-${DROPBEARVER}.tar.bz2" ]; then
+	wget "http://matt.ucc.asn.au/dropbear/dropbear-${DROPBEARVER}.tar.bz2" \
+		-O "${TMPDIR}/dropbear-${DROPBEARVER}.tar.bz2"
+fi # if [ ! -e "${TMPDIR}/dropbear-${DROPBEARVER}.tar.bz2" ]
 
 # Housekeeping...
 if mount | grep -q -e "${INITRDMOUNT}" ; then
@@ -210,7 +214,6 @@ if mount | grep -q -e "${INITRDMOUNT}" ; then
 	exit 1
 fi
 
-CWD=$(pwd)
 if [ ! -d "${IMAGEFSDIR}" ]; then
 	if [ ! -d "../${IMAGEFSDIR}" ]; then
 		echo "I couldn't locate './imagefs' neither '../imagefs' dir" 1>&2
@@ -235,12 +238,12 @@ KERNELVER=""
 if printf "%s" "${BZIMGTYPE}" | grep -q -e 'XZ' -e 'gzip' ; then
 	rm -rf "${TMPDIR}/slack-kernel"
 	mkdir "${TMPDIR}/slack-kernel"
-	BZIMGPATH=$(pwd "${BZIMG}")
+	BZIMGPATH=$(dirname "${BZIMG}")
 	BZIMGPATH="${BZIMGPATH}/${BZIMG}"
 	pushd "${TMPDIR}/slack-kernel"
-	explodepkg "${BZIMGPATH}"
+	explodepkg "${BZIMG}"
 	KERNELVER=$(find ./ -name vmlinuz* | xargs strings | \
-		grep -E -e '^(2|3)\.[0-9]+(\.[0-9]+(\.[0-9]+))' | awk '{ print $1 }')
+		grep -E -e '^(2|3)\.[0-9]+(\.[0-9]+(\.[0-9]+)?)' | awk '{ print $1 }')
 	popd
 elif printf "%s" "${BZIMGTYPE}" | grep -q -e 'Linux kernel' ; then
 	KERNELVER=$(strings "${BZIMG}" | \
@@ -357,7 +360,12 @@ else
 fi # if [ -z "${KMODULESPKG}" ]
 # External file with get_kmodules() which does all cp of kernel modules.
 if [ -e "${BZIMGDIR}/modules.sh" ]; then
-	. "${BZIMGDIR}/modules.sh"
+	MODULES_FILE="${BZIMGDIR}/modules.sh"
+else
+	MODULES_FILE="${CWD}/../kernels/modules.sh"
+fi
+if [ -e "${MODULES_FILE}" ]; then
+	. "${MODULES_FILE}"
 	rm -rf "${TMPDIR}/slack-kmodules"
 	mkdir "${TMPDIR}/slack-kmodules/"
 	cd "${TMPDIR}/slack-kmodules"
@@ -368,7 +376,8 @@ if [ -e "${BZIMGDIR}/modules.sh" ]; then
 	depmod -b ./ "${KERNELVERNO}"
 	popd
 else
-	printf "No kernel modules will be copied to INITRD."
+	printf "File '%s' doesn't seem to exist.\n" "${MODULES_FILE}"
+	printf "No kernel modules will be copied to INITRD.\n"
 fi # if [ -e "${BZIMGDIR}/modules.sh" ]
 #### udev
 UDEVPKG=$(parse_package 'udev-')
@@ -455,9 +464,9 @@ if [ ! -z "${MODULEINITPKG}" ]; then
 fi # if MODULEINITPKG
 #### Dropbear
 cd "${TMPDIR}"
-rm -rf "${DROPBEARVER}"
-tar -jxf "${DROPBEARVER}.tar.bz2"
-cd "${DROPBEARVER}"
+rm -rf "dropbear-${DROPBEARVER}"
+tar -jxf "dropbear-${DROPBEARVER}.tar.bz2"
+cd "dropbear-${DROPBEARVER}"
 ./configure --prefix=/usr 2>&1 >/dev/null || exit 101
 make 2>&1 >/dev/null || exit 102
 make install DESTDIR="${INITRDMOUNT}" 2>&1 >/dev/null || exit 103
@@ -470,7 +479,7 @@ popd
 #### Setup
 pushd "${INITRDMOUNT}"
 mkdir -p ./usr/lib/setup 2>/dev/null
-cp -r ${CWD}/setup/* ./usr/lib/setup/
+cp -r ${CWD}/../setup/* ./usr/lib/setup/
 cat > ./usr/sbin/setup << EOF
 #!/bin/ash
 cd /usr/lib/setup
@@ -479,12 +488,12 @@ EOF
 chmod +x ./usr/sbin/setup
 #### Encrypted password
 sed -r -e "s#^PASSWD=.*\$#PASSWD='${PASSWDENC}'#" \
-	"${CWD}/${KSCONFIG}" > etc/Kickstart.cfg
+	"${KSCONFIG}" > etc/Kickstart.cfg
 # makedevs.sh is being copied from imagefs dir
-if [ ! -z "${TAG}" ] && [ -e "${CWD}/taglists/${TAG}" ]; then
+if [ ! -z "${TAG}" ] && [ -e "${CWD}/../taglists/${TAG}" ]; then
 	printf "Adding TAG-list '${TAG}' of packages ... "
 	printf "#\n# Taglist: %s\n" "${TAG}" >> etc/Kickstart.cfg
-	awk '{ printf "#@%s\n", $0 }' "${CWD}/taglists/${TAG}" >> etc/Kickstart.cfg
+	awk '{ printf "#@%s\n", $0 }' "${CWD}/../taglists/${TAG}" >> etc/Kickstart.cfg
 	printf "# END of Taglist: %s" $TAG >> etc/Kickstart.cfg
 	printf "done\n"
 fi
@@ -684,19 +693,19 @@ if [ ! -z "${NTPPKG}" ]; then
 fi # if $NTPPKG
 ### Finish up...
 #### Set TZ
-cp -pr ${CWD}/${IMAGEFSDIR}/* "${INITRDMOUNT}/"
+cp -pr ${IMAGEFSDIR}/* "${INITRDMOUNT}/"
 if [ -e "/usr/share/zoneinfo/${TIMEZONE}" ]; then
 	echo "Configuring TZ settings"
 	cat "/usr/share/zoneinfo/${TIMEZONE}" > "${INITRDMOUNT}/etc/localtime"
 fi
 chmod +x ${INITRDMOUNT}/etc/rc.d/rc.*
 #### SSH keys
-if [ -e "${CWD}/config-files/authorized_keys" ]; then
+if [ -e "${CWD}/../config-files/authorized_keys" ]; then
 	printf "Getting SSH keys\n"
 	mkdir -p "${INITRDMOUNT}/root/.ssh/"
 	mkdir -p "${INITRDMOUNT}/etc/dropbear/"
-	cp "${CWD}/config-files/authorized_keys" "${INITRDMOUNT}/etc/dropbear/"
-	cp "${CWD}/config-files/authorized_keys" "${INITRDMOUNT}/root/.ssh/"
+	cp "${CWD}/../config-files/authorized_keys" "${INITRDMOUNT}/etc/dropbear/"
+	cp "${CWD}/../config-files/authorized_keys" "${INITRDMOUNT}/root/.ssh/"
 	chmod 400 "${INITRDMOUNT}/root/.ssh/" "${INITRDMOUNT}/etc/dropbear/"
 fi
 #### passwords
@@ -711,19 +720,20 @@ sed -r -e "/^root:/c \root:${PASSWDENC}:14466:0:::::" \
 rm -f etc/shadow.org
 popd
 #### pre-installation scripts
-if [ -d "${CWD}/pre-install/" ]; then
+if [ -d "${CWD}/../pre-install/" ]; then
 	printf "Copying pre-installation scripts.\n"
 	mkdir -p ${INITRDMOUNT}/etc/pre-install || true
-	for PRESCRIPT in $(ls "${CWD}/pre-install/"); do
-		cp -r "${CWD}/pre-install/${PRESCRIPT}" "${INITRDMOUNT}/etc/pre-install/"
+	for PRESCRIPT in $(ls "${CWD}/../pre-install/"); do
+		cp -r "${CWD}/../pre-install/${PRESCRIPT}" "${INITRDMOUNT}/etc/pre-install/"
 	done
 fi
 #### post-installation scripts
-if [ -d "${CWD}/post-install/" ]; then
+if [ -d "${CWD}/../post-install/" ]; then
 	printf "Copying post-installation scripts.\n"
 	mkdir -p ${INITRDMOUNT}/etc/post-install || true
-	for POSTSCRIPT in $(ls "${CWD}/post-install/"); do
-		cp -r "${CWD}/post-install/${POSTSCRIPT}" "${INITRDMOUNT}/etc/post-install/"
+	for POSTSCRIPT in $(ls "${CWD}/../post-install/"); do
+		cp -r "${CWD}/../post-install/${POSTSCRIPT}" \
+			"${INITRDMOUNT}/etc/post-install/"
 	done
 fi
 #### chown root:root everything
@@ -733,5 +743,8 @@ df -h "${INITRDMOUNT}"
 umount "${INITRDMOUNT}"
 gzip -9 "${TMPDIR}/ramdisk.img"
 RDISKNAME=$(basename "${KSCONFIG}" .cfg)
-mv "${TMPDIR}/ramdisk.img.gz" "${CWD}/rootdisks/${RDISKNAME}.gz"
+if [ ! -d "${CWD}/../rootdisks/" ]; then
+	mkdir "${CWD}/../rootdisks/"
+fi
+mv "${TMPDIR}/ramdisk.img.gz" "${CWD}/../rootdisks/${RDISKNAME}.gz"
 # EOF
