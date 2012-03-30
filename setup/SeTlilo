@@ -85,8 +85,12 @@ EOF1
 
 # FIX/Workaround to boot from VirtIO disk
 if printf "%s" "${BOOTDEV}" | grep -q -E -e '/dev/vd[a-z]+'; then
-	printf "disk=${VDD} bios=0x80 max-partitions=7\n" >> /mnt/etc/lilo.conf
+	printf "disk=${BOOTDEV} bios=0x80 max-partitions=7\n" >> /mnt/etc/lilo.conf
 fi
+
+cp -apr $BOOTDEV* /mnt/dev/
+mkdir /mnt/proc/ || true
+cp /proc/partitions /mnt/proc/ || true
 
 cat << EOF2 >> /mnt/etc/lilo.conf
 lba32
