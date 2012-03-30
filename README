@@ -1,3 +1,7 @@
+BUGs:
+2] kernel panics after the first boot - wtf
+yet if you run lilo again after booting up into VM, it works then and ever after
+
 Slack-Kickstart
 ---------------
 
@@ -256,10 +260,10 @@ not necessary.
 In case of kernel wrapped into package, package is unpacked by # explodepkg ; at
 first and 'vmlinuz*' is searched for afterwards and used, if found.
 
-As for kernel modules. At first, search for kernel-modules package is made. If
-not found, similar search is made on Slackware installation medium.
-As to determine which modules to copy, this is determined by script 'modules.sh'
-which must be in the same location as kernel is found. This script must have
+As for kernel modules. At first, search for kernel-modules package. If package
+is not found, similar search is made on Slackware installation medium.
+As to determine which modules to copy, this is handled by script 'modules.sh'
+which must be in the same location as the kernel is found. This script must have
 function get_kmodules() which handles all copy operations and, actually,
 whatever you want. If this script doesn't exist, no kernel modules will be
 copied!
