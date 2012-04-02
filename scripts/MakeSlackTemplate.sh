@@ -702,11 +702,13 @@ chmod +x ${INITRDMOUNT}/etc/rc.d/rc.*
 #### SSH keys
 if [ -e "${CWD}/../config-files/authorized_keys" ]; then
 	printf "Getting SSH keys\n"
-	mkdir -p "${INITRDMOUNT}/root/.ssh/"
-	mkdir -p "${INITRDMOUNT}/etc/dropbear/"
+	mkdir -p "${INITRDMOUNT}/root/.ssh/" "${INITRDMOUNT}/etc/dropbear/"
+	chmod 700 "${INITRDMOUNT}/root/.ssh/" "${INITRDMOUNT}/etc/dropbear/"
+	#
 	cp "${CWD}/../config-files/authorized_keys" "${INITRDMOUNT}/etc/dropbear/"
 	cp "${CWD}/../config-files/authorized_keys" "${INITRDMOUNT}/root/.ssh/"
-	chmod 400 "${INITRDMOUNT}/root/.ssh/" "${INITRDMOUNT}/etc/dropbear/"
+	chmod 400 "${INITRDMOUNT}/root/.ssh/authorized_keys" \
+		"${INITRDMOUNT}/etc/dropbear/authorized_keys"
 fi
 #### passwords
 printf "Altering passwords.\n"
