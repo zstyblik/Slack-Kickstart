@@ -242,7 +242,7 @@ if printf "%s" "${BZIMGTYPE}" | grep -q -e 'XZ' -e 'gzip' ; then
 	BZIMGPATH="${BZIMGPATH}/${BZIMG}"
 	pushd "${TMPDIR}/slack-kernel"
 	explodepkg "${BZIMG}"
-	KERNELVER=$(find ./ -name vmlinuz* | xargs strings | \
+	KERNELVER=$(find ./ -name vmlinuz* -print0 | xargs -0 strings | \
 		grep -E -e '^(2|3)\.[0-9]+(\.[0-9]+(\.[0-9]+)?)' | awk '{ print $1 }')
 	popd
 elif printf "%s" "${BZIMGTYPE}" | grep -q -e 'Linux kernel' ; then
@@ -400,7 +400,7 @@ if [ ! -z "${SLACKETCPKG}" ]; then
 	explodepkg "${SLACKETCPKG}" 1>/dev/null
 	sh ./install/doinst.sh
 	rm -rf ./install/
-	find ./tmp | xargs rm -rf
+	find ./tmp -print0 | xargs -0 rm -rf
 	cp -apr /etc/protocols etc/
 	cp -apr /etc/hosts.* etc/
 	touch etc/resolv.conf
@@ -739,7 +739,8 @@ if [ -d "${CWD}/../post-install/" ]; then
 	done
 fi
 #### chown root:root everything
-find "${INITRDMOUNT}" ! -user root ! -group root | xargs chown root:root
+find "${INITRDMOUNT}" ! -user root ! -group root -print0 |\
+	xargs -0 chown root:root
 #
 df -h "${INITRDMOUNT}"
 umount "${INITRDMOUNT}"
