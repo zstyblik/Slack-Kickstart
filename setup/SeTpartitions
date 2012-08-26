@@ -64,7 +64,7 @@ for DEVLINE in $(cat /tmp/Partitions); do
 	else
 		printf "\t[FAIL]\n"
 		printf "\nFATAL ERROR formatting %s - Aborting\n" "${PARTITION_DEVICE}"
-		echo "HINT: Check tty4 for errors during format."
+		printf "HINT: Check '%s' for errors during format." "${REDIR}"
 		FireBugInfo
 		exit 1
 	fi # if $COMMAND $PARTITION ...
@@ -87,7 +87,7 @@ fi # if [ -z "${ROOTPART}" ]
 # Check if we can mount ROOTPART.
 if ! mount "${ROOTPART}" /mnt ; then
 	printf "\nFATAL ERROR mounting root partition %s - Aborting\n" "${ROOTPART}"
-	printf "HINT: Check tty4 for errors.\n"
+	printf "HINT: Check '%s' for errors.\n" "${REDIR}"
 	FireBugInfo
 	exit 1
 fi # if ! mount "${ROOTPART}"
