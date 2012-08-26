@@ -137,8 +137,7 @@ if [ -e /tmp/Kickstart.END ]; then
 		IFS=''
 	fi # if -n POSTSCRIPT
 	# Installation ends!
-	echo -e \\a
-	printf "Installation complete.\n\n"
+	printf "Installation complete.\n\n\a"
 	# Eject CD-Rom before reboot
 	if [ -s /tmp/CDROM ] && [ -x /bin/eject ]; then
 		/bin/eject $(cat /tmp/CDROM)
