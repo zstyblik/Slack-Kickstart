@@ -61,8 +61,15 @@ Create_Install_List() {
 		#
 		PKG=$(printf "%s\n" ${PACKAGE} | cut -d "/" -f 2)
 		DIRECTORY=$(printf "%s\n" ${PACKAGE} | cut -d "/" -f 1)
-		FILENAME=$(cat /mnt/PkgList.txt | grep -e "^${PKG}-[[:digit:]]")
-		printf "%s/%s\n" ${DIRECTORY} ${FILENAME} >> /mnt/usr/Download/install.list
+		FILENAME=$(cat /mnt/PkgList.txt | grep -E -e "^${PKG}-.*\.t(g|x)z$" | \
+			head -n 1)
+
+		if [ -z "${FILENAME}" ]; then
+			continue
+		fi
+
+		printf -- "%s/%s\n" "${DIRECTORY}" \
+			"${FILENAME}" >> /mnt/usr/Download/install.list
 	done # for PACKAGE
 	return 0
 } # Create_Install_List
