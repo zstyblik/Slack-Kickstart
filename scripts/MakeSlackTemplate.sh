@@ -36,6 +36,7 @@ IMAGEFSDIR=${IMAGEFSDIR:-"${CWD}/../imagefs"}
 INITRDMOUNT=${INITRDMOUNT:-'/mnt/initrd'}
 SLACKCDPATH=${SLACKCDPATH:-'/mnt/cdrom/'}
 TMPDIR=${TMPDIR:-'/tmp'}
+ERROR_LOG=${ERROR_LOG:-"${TMPDIR}/${0}.err.log"}
 
 # Ramdisk Constants
 RDSIZE=${RDSIZE:-65536}
@@ -44,9 +45,10 @@ BLKSIZE=1024
 SCRIPTNAME=$(basename "${0}")
 PREFIX="$(dirname "${SCRIPTNAME}")"
 
-rm -f "${TMPDIR}/${SCRIPTNAME}.stderr.log"
-touch "${TMPDIR}/${SCRIPTNAME}.stderr.log"
-exec 2>"${TMPDIR}/${SCRIPTNAME}.stderr.log"
+rm -f "${ERROR_LOG}"
+mv "${ERROR_LOG}" "${ERROR_LOG}.old" 2>/dev/null || true
+touch "${ERROR_LOG}"
+printf "Error log '%s'.\n" "${ERROR_LOG}"
 
 # DESC: removes /usr/man, /usr/doc and /usr/share
 clean_usr()
@@ -65,11 +67,11 @@ getlibs()
 {
 	BINARY=${1:-''}
 	if [ -z "${BINARY}" ]; then
-		echo "[FAIL] getlibs ~ parameter unset"
+		log_error "ERROR: getlibs() - parameter unset"
 		return 1
 	fi
 	if [ ! -e "${BINARY}" ]; then
-		echo "[FAIL] getlibs ~ binary '${BINARY}' doesn't exist."
+		log_error "ERROR: getlibs() - binary '${BINARY}' doesn't exist."
 		return 1
 	fi
 	for LIBLINE in $(ldd "${BINARY}" | tr ' ' '#'); do
@@ -79,7 +81,7 @@ getlibs()
 			LIBTOCOPY=$(printf "%s\n" ${LIBLINE} | awk -F'#' '{ print $1 }');
 			LIBDIR=$(dirname "${LIBTOCOPY}")
 			if [ -z "${LIBTOCOPY}" ]; then
-				echo "[FAIL] failed to automagically copy lib dep for '${BINARY}'"
+				log_error "WARN: failed to automagically copy lib dep for '${BINARY}'"
 				continue
 			fi
 			if [ -e "${INITRDMOUNT}/${LIBTOCOPY}" ]; then
@@ -106,7 +108,7 @@ getlibs()
 			LIBDIR=$(dirname "${LIBPOINTER}")
 			LIBLINK=$(printf "%s\n" ${LIBLINE} | awk -F'#' '{ print $1 }')
 			if [ -z "${LIBREAL}" -o -z "${LIBLINK}" ]; then
-				echo "[FAIL] failed to to automagically copy lib dep for '${BINARY}'"
+				log_error "WARN: failed to to automagically copy lib dep for '${BINARY}'"
 				continue
 			fi
 			if [ ! -d "${INITRDMOUNT}/${LIBDIR}" ]; then
@@ -124,6 +126,22 @@ getlibs()
 	done
 	return 0
 } # getlibs
+# DESC: wrapper for logging errors to file, or wherewer.
+log_error()
+{
+	MSG=${1:-''}
+	if [ ! -w "${ERROR_LOG}" ] && ! touch "${ERROR_LOG}" ; then
+		printf -- "ERROR: log_error() - Log file '%s' not writable.\n" \
+			"${ERROR_LOG}" 1>&2
+		exit 1
+	fi
+	if [ -z "${MSG}" ]; then
+		printf "ERROR: log_error() - message is empty?" 1>&2
+		return 1
+	fi
+	printf -- "${MSG}\n" >> "${ERROR_LOG}"
+	return 0
+} # log_error
 # DESC: automagically searches for PKG by needle in CHECKSUMS.md5 
 # and returns PKG path and name in case PKG was found.
 parse_package()
@@ -133,7 +151,7 @@ parse_package()
 		return 1
 	fi
 	if [ ! -e "${SLACKCDPATH}/CHECKSUMS.md5" ]; then
-#		echo "File '${SLACKCDPATH}/CHECKSUMS.md5' doesn't seem to exist."
+		log_error "File '${SLACKCDPATH}/CHECKSUMS.md5' doesn't seem to exist."
 		echo ""
 		return 1
 	fi
@@ -141,7 +159,7 @@ parse_package()
 		grep -e "./slackware${LIBDIRSUFFIX}" | grep -E -e '.t?z$' | \
 		awk '{ print $2 }')
 	if [ -z "${PKGFOUND}" ]; then
-#		echo "No PKG found for needle '${PKGNEEDLE}'."
+		log_error "No PKG found for needle '${PKGNEEDLE}'."
 		echo ""
 		return 1
 	fi
@@ -152,6 +170,7 @@ parse_package()
 show_help() 
 {
 	echo "Usage: ${0} <CFG> <KERNEL_PKG|BZIMG>"
+	printf "\nMake sure you have set variables BUSYBOXFILE and SLACKCDPATH!\n"
 	echo "Help haven't been written yet."
 	return 0
 } # show_help
@@ -182,8 +201,8 @@ if [ ! -e "${BZIMG}" ]; then
 	exit 1
 fi # if [ ! -e "${BZIMG}" ]
 if [ ! -e "${BUSYBOXFILE}" ]; then
-	printf "Busybox not found '%s'.\n" "${BUSYBOXFILE}"
-	printf "Busybox is mandatory. Unable to continue.\n"
+	printf "ERROR: Busybox not found '%s'.\n" "${BUSYBOXFILE}" 1>&2
+	printf "ERROR: Busybox is mandatory. Unable to continue.\n" 1>&2
 	exit 1
 fi # if [ ! -e "${BZIMG}" ]
 # If $DROPBEARVER is not set, try figure out the latest from the Web
@@ -199,7 +218,7 @@ if [ -z "${DROPBEARVER}" ]; then
 	print part; \
 }' | sort | tail -n 1 | cut -d '-' -f 2-)
 	if [ -z "${DROPBEARVER}" ]; then
-		printf "Unable to determine Dropbear version.\n" 1>&2
+		printf "ERROR: Unable to determine Dropbear version.\n" 1>&2
 		exit 1
 	fi # if [ -z "${DROPBEARVER}" ]
 fi # if [ -z "${DROPBEARVER}" ]
@@ -249,11 +268,11 @@ elif printf "%s" "${BZIMGTYPE}" | grep -q -e 'Linux kernel' ; then
 	KERNELVER=$(strings "${BZIMG}" | \
 		grep -E -e '^(2|3)\.[0-9]+(\.[0-9]+(\.[0-9]+))' | awk '{ print $1 }')
 else
-	printf "bzImage '%s' has invalid/unsupported format.\n" "${BZIMG}" 1>&2
+	printf "ERROR: bzImage '%s' has invalid/unsupported format.\n" "${BZIMG}" 1>&2
 	exit 1
 fi
 if [ -z "${KERNELVER}" ]; then
-	printf "Failed to determine kernel version.\n" 1>&2
+	printf "ERROR: Failed to determine kernel version.\n" 1>&2
 	exit 1
 fi
 
@@ -310,7 +329,7 @@ for CMD in $(./bin/busybox --list-ful); do
 	CMDDIR=$(dirname "${CMD}")
 	if [ ! -d "${CMDDIR}" ]; then
 		if ! mkdir -p "./${CMDDIR}" ; then
-			printf "Unable to create dir '%s'\n" "${CMDDIR}" 1>&2
+			printf "ERROR: Unable to create dir '%s'\n" "${CMDDIR}" 1>&2
 			exit 253
 		fi
 	fi
@@ -332,11 +351,13 @@ cp -adpR /dev/null "${INITRDMOUNT}/dev"
 mkdir "${INITRDMOUNT}/dev/pts"
 mkdir "${INITRDMOUNT}/dev/shm"
 #### udhcpc
+printf "Copying uDHCPC script.\n"
 mkdir -p "${INITRDMOUNT}/etc/udhcpc" || true
 cp "${IMAGEFSDIR}/etc/udhcpc/default.script" \
 	${INITRDMOUNT}/etc/udhcpc/default.script
 chmod +x ${INITRDMOUNT}/etc/udhcpc/default.script
 #### Kernel modules
+printf "Determining Kernel version.\n"
 KERNELVERNO=$(printf "%s\n" ${KERNELVER} | awk -F'-' '{ print $1 }')
 KERNELSUFFIX=$(printf "%s\n" ${KERNELVER} | awk -F'-' '{ print $2 }')
 KMODPATH="${TMPDIR}/slack-kmodules/lib/modules/${KERNELVER}"
@@ -351,7 +372,7 @@ if [ -z "${KMODULESPKG}" ]; then
 	# Try to find kernel-modules package on CD-ROM/wherever
 	KMODULESPKG=$(parse_package "${KMODSPKGSTR}")
 	if [ -z "${KMODULESPKG}" ]; then
-		printf "Failed to locate '%s' package.\n" "${KMODSPKGSTR}" 1>&2
+		printf "ERROR: Failed to locate '%s' package.\n" "${KMODSPKGSTR}" 1>&2
 		exit 1
 	fi # if [ -z "${KMODULESPKG}" ]
 else
@@ -376,8 +397,8 @@ if [ -e "${MODULES_FILE}" ]; then
 	depmod -b ./ "${KERNELVERNO}"
 	popd
 else
-	printf "File '%s' doesn't seem to exist.\n" "${MODULES_FILE}"
-	printf "No kernel modules will be copied to INITRD.\n"
+	log_error "WARN: File '%s' doesn't seem to exist.\n" "${MODULES_FILE}" 1>&2
+	log_error "WARN: No kernel modules will be copied to INITRD.\n" 1>&2
 fi # if [ -e "${BZIMGDIR}/modules.sh" ]
 #### udev
 UDEVPKG=$(parse_package 'udev-')
