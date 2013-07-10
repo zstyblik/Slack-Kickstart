@@ -1,5 +1,6 @@
-#!/bin/bash
+#!/bin/sh
 # Desc: Converts tagfiles to taglist
+#
 # Copyright (C) 2006 Davide Zito
 # 
 # This program is free software; you can redistribute it and/or modify
@@ -18,38 +19,36 @@
 # 
 # Tag2List.sh
 #
+set -e
+set -u
 print_help()
 {
-	printf "#\n# Converts Slackware tagfiles in taglist format:\n"
-	printf "#\n# Usage: %s tagfiles/tag-file\n#\n" ${0}
-	printf "# Example: to convert mini-tag Tagfile\n"
-	printf "# %s tagfiles/mini-tag \n#\n" ${0}
+	printf "Convert Slackware's tag file into tag list.\n" 1>&2
+	printf "Usage: %% %s <tag_directory>;\n" $(basename -- "${0}") 1>&2
+	printf "Example: %% %s tagfiles/mini-tag > taglists/mini-list;\n" 1>&2
 	return 0
 } # print_help()
 
 FILEIN=${1:-'None'}
 
 if [ $# -ne 1 ]; then
+	printf "Error: Not enough parameters given.\n\n" 1>&2
 	print_help
 	exit 1
 fi
-
-if [ "${FILEIN}" = "None" ] || [ ! -f "${FILEIN}" ]; then
-	printf "#\n# Tagfile either doesn't exist or is not set.\n"
+if [ "${FILEIN}" = "None" ] || [ ! -d "${FILEIN}" ]; then
+	printf "Error: Tagfile either doesn't exist or is not set.\n\n" 1>&2
 	print_help
 	exit 1
 fi
-
-LISTNAME=$(basename "${FILEIN}")
-
-printf "#\n" > "taglists/${LISTNAME}"
 
 for DISKSET in $(ls "${FILEIN}/" | grep -v -e 'CVS'); do
-	printf "#\n# Diskset %s\n#" "${DISKSET}" >> "./taglists/${LISTNAME}"
+	printf "#\n# Diskset %s\n#\n" "${DISKSET}"
+	IFS_OLD=$IFS
+	IFS="###@@@###"
 	for PACKAGE in $(grep -v -e '^#' "${FILEIN}/${DISKSET}/tagfile"); do
-		printf "%s/%s\n" ${DISKSET} ${PACKAGE} >> "./taglists/${LISTNAME}"
+		printf -- "%s/%s\n" "${DISKSET}" "${PACKAGE}"
 	done 
+	IFS=$IFS_OLD
 done
-
-printf "\nTaglist '%s' has been created in './taglists/%s'\n" \
-	${LISTNAME} ${LISTNAME}
+printf "Done with conversion of '%s'.\n" "${FILEIN}" 1>&2
