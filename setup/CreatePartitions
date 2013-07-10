@@ -19,31 +19,34 @@
 # Creates device nodes
 # Note: makedev command seems to be gone
 if ! ps aux | grep -e 'udevd' | grep -q -v -e 'grep' ; then
-	/usr/sbin/makedevs.sh > ${REDIR} 2>&1
+	/usr/sbin/makedevs.sh >> "${FH_LOG}" 2>&1
 fi
-for DRIVE in $(awk -F':' '{ print $1 }' /tmp/Partitions | sort | uniq); do
+for DRIVE in $(awk -F':' '{ print $1 }' "${TMP}/Partitions" | sort | uniq); do
 	# Clear MBR & Partition table
-	dd if=/dev/zero of=${DRIVE} bs=512 count=1 > ${REDIR} 2>&1
+	dd if=/dev/zero of=${DRIVE} bs=512 count=1 >> "${FH_LOG}" 2>&1
 	# Create partitions
-	printf "Creating partitions on %s..... " "${DRIVE}"
-	grep -e "^${DRIVE}" /tmp/Partitions | awk -F':' '{ print $5 }' | \
-		sfdisk --no-reread --force ${DRIVE} -uM > ${REDIR} 2>&1
+	printf "Creating partitions on %s..... " "${DRIVE}" | \
+		tee -a "${FH_LOG}"
+	grep -e "^${DRIVE}" "${TMP}/Partitions" | \
+		awk -F':' '{ print $5 }' | \
+		sfdisk --no-reread --force ${DRIVE} -uM >> "${FH_LOG}" 2>&1
 	# Test Partitions
-	if ! sfdisk -V ${DRIVE} > ${REDIR} 2>&1 ; then
-		printf "[FAIL]\n"
-		printf "\nFATAL ERROR on partitions table - Aborting\n"
-		printf "HINT: Check tty4 for errors.\n"
-		printf "HINT: Partitions exceeding %s size ?\n" ${DRIVE}
+	if ! sfdisk -V ${DRIVE} >> "${FH_LOG}" 2>&1 ; then
+		printf "[FAIL]\n" | tee -a "${FH_LOG}"
+		printf "\nFATAL ERROR on partitions table - Aborting\n" | \
+			tee -a "${FH_LOG}"
+		printf "HINT: Check tty4 for errors.\n" | tee -a "${FH_LOG}"
+		printf "HINT: Partitions exceeding %s size ?\n" "${DRIVE}" |\
+			tee -a "${FH_LOG}"
 		FireBugInfo
 		exit 1
-	else
-		printf "[OK]\n"
 	fi # if ! sfdisk -V ...
+	printf "[OK]\n" | tee -a "${FH_LOG}"
 done # for DRIVE
 #
 # Device creation: now we need to create dev nodes for the new partitions
 # Note: makedev command seems to be gone.
 if ! ps aux | grep -e 'udevd' | grep -q -v -e 'grep'; then
-	/usr/sbin/makedevs.sh > ${REDIR} 2>&1
+	/usr/sbin/makedevs.sh >> "${FH_LOG}" 2>&1
 fi
 # EOF

@@ -17,7 +17,8 @@ SWARETPKG="swaret-1.6.3-noarch-2.tgz"
 #
 . /usr/lib/setup/include/functions.inc
 
-printf "TODO - obsolete ETH still here.\n"
+printf "TODO - Swaret - obsolete ETH still here.\n" | tee -a "${FH_LOG}"
+touch /tmp/Kickstart.END
 exit 1
 
 ###########################
@@ -40,25 +41,26 @@ cd /mnt/usr/Download
 # Downloads and installs
 # swaret from sourceforge.net
 #
-echo "Packages updated by swaret - downloading from SF.net"
+printf "Packages updated by swaret - downloading from SF.net\n"
 
 LINK="http://ovh.dl.sourceforge.net/sourceforge/swaret/${SWARETPKG}"
 
 if ! wget "${LINK}" ; then
-	echo "ERROR downloading swaret - Skipping Autoupdates!" | tee /var/log/swaret 
+	printf "ERROR downloading swaret - Skipping Autoupdates!\n" | \
+		tee /var/log/swaret 
 	touch /tmp/Kickstart.END
 	exit 0
 fi
 #
 # Renames swaret package and installs it!
 #
-NOSUFFIX=$(basename ${SWARETPKG} .tar)
+NOSUFFIX=$(basename ${SWARETPKG} '.tar')
 if [ $SWARETPKG != $NOSUFFIX ]; then
 	mv $SWARETPKG $NOSUFFIX
 	SWARETPKG=$NOSUFFIX
 fi
 
-/usr/lib/setup/installpkg --root /mnt $SWARETPKG
+/usr/lib/setup/installpkg --root /mnt $SWARETPKG 2>&1 | tee -a "${FH_LOG}"
 #
 # If PKG Repository is NFS or CD-Rom , is better to point
 # to HTTP or FTP backup PKG servers. 

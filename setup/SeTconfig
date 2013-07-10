@@ -27,27 +27,27 @@
 # qwerty/it.map
 # we need only the 'x.map' part
 #
-KMAP=$(printf "%s" "${KEYMAP}" | cut -d "/" -f 2)
+KMAP=$(printf -- "%s" "${KEYMAP}" | awk -F'/' '{ print $2 }')
 
 ######################
 # Sets root password #
 ######################
-echo "[INFO] Setting root's password"
+printf "[INFO] Setting root's password\n" | tee -a "${FH_LOG}"
 sed -e "s@root::@root:${PASSWD}:@g" /mnt/etc/shadow > /mnt/etc/shadow2
 cp /mnt/etc/shadow2 /mnt/etc/shadow
 chmod 600 /mnt/etc/shadow
 #################
 # Copy SSH keys #
 #################
-printf "[INFO] Copying SSH keys..."
+printf "[INFO] Copying SSH keys..." | tee -a "${FH_LOG}"
 if [ -e /etc/dropbear/authorized_keys ]; then
 	mkdir -p /mnt/root/.ssh || true
 	chmod go-rwx '/mnt/root/.ssh'
 	cp /etc/dropbear/authorized_keys /mnt/root/.ssh
 	chmod 600 /mnt/root/.ssh/authorized_keys
-	printf "[ OK ]\n"
+	printf "[ OK ]\n" | tee -a "${FH_LOG}"
 else
-	printf "[ SKP ]\n"
+	printf "[ SKP ]\n" | tee -a "${FH_LOG}"
 fi
 ##################
 # Timezone Setup #
@@ -60,7 +60,7 @@ if [ ! -d /mnt/etc/rc.d ]; then
 	mkdir -p /mnt/etc/rc.d/
 fi
 printf "\n\n#\n# Loads ${KEYMAP} keymap\n#\n" >> /mnt/etc/rc.d/rc.local
-echo "/usr/bin/loadkeys \"${KMAP}\"" >> /mnt/etc/rc.d/rc.local
+printf "/usr/bin/loadkeys \"%s\"" "${KMAP}" >> /mnt/etc/rc.d/rc.local
 #################
 # HWClock setup #
 #################
@@ -162,7 +162,8 @@ fi
 # Slackware updates setup #
 ###########################
 if [ -e /tmp/NONET ]; then
-	echo "No network support: skipping Autoupdates."
+	printf "No network support: skipping Autoupdates.\n" | \
+		tee -a "${FH_LOG}"
 	touch /tmp/Kickstart.END
 	exit 0
 fi

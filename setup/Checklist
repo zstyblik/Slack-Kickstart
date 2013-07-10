@@ -109,7 +109,7 @@ if [ ! -e /tmp/NONET ]; then
 	if [ ! -e /tmp/NETWORK_UP ]; then
 		for IFACE in $(cut -d ',' -f 1 /tmp/NetworkSettings | \
 			grep -E -e '^[a-z]+[0-9]+$'	| sort | uniq); do
-			if ! /bin/ip link show dev "${IFACE}" &>/dev/null ; then
+			if ! /bin/ip link show dev "${IFACE}" > /dev/null 2>&1; then
 				printf "Device '%s' doesn't seem to be present!\n" "${IFACE}"
 				continue
 			fi

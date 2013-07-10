@@ -25,8 +25,8 @@
 # filesystem.
 #
 printf "Going to format partitions.\n"
-for DEVLINE in $(cat /tmp/Partitions); do
-	FS=$(printf "%s" "${DEVLINE}" | awk -F':' '{ print $4 }')
+for DEVLINE in $(cat "${TMP}/Partitions"); do
+	FS=$(printf -- "%s" "${DEVLINE}" | awk -F':' '{ print $4 }')
 	# see if this partition has a filesystem associated
 	case "$FS" in
 		'xfs')
@@ -53,21 +53,21 @@ for DEVLINE in $(cat /tmp/Partitions); do
 			INODES=4096
 			CHECK="n"
 	esac
-	DEVICE=$(printf "%s" "${DEVLINE}" | cut -d ':' -f 1)
+	DEVICE=$(printf -- "%s" "${DEVLINE}" | awk -F':' '{ print $1 }')
 	DEVICE=$(Check_Smart_Array "${DEVICE}")
-	PARTITION_DEVICE=$(printf "%s" "${DEVLINE}" | cut -d ':' -f 2)
+	PARTITION_DEVICE=$(printf -- "%s" "${DEVLINE}" | \
+		awk -F':' '{ print $2 }')
 	PARTITION_DEVICE="${DEVICE}${PARTITION_DEVICE}"
 
-	printf "${PARTITION_DEVICE} [${FS}] ..... "
-	if $COMMAND ${PARTITION_DEVICE} ${INODES} ${CHECK} ; then
-		printf "\t[ OK ]\n"
-	else
-		printf "\t[FAIL]\n"
-		printf "\nFATAL ERROR formatting %s - Aborting\n" "${PARTITION_DEVICE}"
-		printf "HINT: Check '%s' for errors during format." "${REDIR}"
+	printf -- "${PARTITION_DEVICE} [${FS}] ..... "
+	if ! $COMMAND ${PARTITION_DEVICE} ${INODES} ${CHECK} ; then
+		printf "\t[FAIL]\n" | tee -a "${FH_LOG}"
+		printf "\nFATAL ERROR formatting %s - Aborting\n" \
+			"${PARTITION_DEVICE}" | tee -a "${FH_LOG}"
 		FireBugInfo
 		exit 1
-	fi # if $COMMAND $PARTITION ...
+	fi # if ! $COMMAND $PARTITION ...
+	printf "\t[ OK ]\n" | tee -a "${FH_LOG}"
 done # for DEVLINE
 #
 # Now, we MUST mount root partition on /mnt
@@ -78,7 +78,8 @@ ROOTPART=${ROOTPART:-''}
 if [ -z "${ROOTPART}" ]; then
 	ROOTPART=$(Get_Root_Partition)
 	if [ -z "${ROOTPART}" ]; then
-		printf "Root partition not set - Aborting.\n"
+		printf "Root partition not set - Aborting.\n" | \
+			tee -a "${FH_LOG}"
 		FireBugInfo
 		exit 1
 	fi # if [ -z "${ROOTPART}" ]
@@ -86,16 +87,17 @@ fi # if [ -z "${ROOTPART}" ]
 #
 # Check if we can mount ROOTPART.
 if ! mount "${ROOTPART}" /mnt ; then
-	printf "\nFATAL ERROR mounting root partition %s - Aborting\n" "${ROOTPART}"
-	printf "HINT: Check '%s' for errors.\n" "${REDIR}"
+	printf "\nFATAL ERROR mounting root partition %s - Aborting\n" \
+		"${ROOTPART}" | tee -a "${FH_LOG}"
 	FireBugInfo
 	exit 1
 fi # if ! mount "${ROOTPART}"
 
-for DEVLINE in $(cat /tmp/Partitions | cut -d ':' -f 1-3); do
-	MOUNTPOINT=$(printf "%s\n" "${DEVLINE}" | cut -d ':' -f 3)
-	MOUNTPARSED=$(printf "%s\n" "${DEVLINE}" | cut -d ':' -f 2)
-	DEVICE=$(printf "%s\n" "${DEVLINE}" | cut -d ':' -f 1)
+for DEVLINE in $(cat "${TMP}/Partitions" | \
+	awk -F':' '{ printf "%s:%s:%s\n", $1, $2, $3 }'); do
+	MOUNTPOINT=$(printf "%s\n" "${DEVLINE}" | awk -F':' '{ print $3 }')
+	MOUNTPARSED=$(printf "%s\n" "${DEVLINE}" | awk -F':' '{ print $2 }')
+	DEVICE=$(printf "%s\n" "${DEVLINE}" | awk -F':' '{ print $1 }')
 	MOUNT_DEVICE="${DEVICE}${MOUNTPARSED}"
 	
 	if [ "${MOUNT_DEVICE}" = ${ROOTPART} ]; then
@@ -104,7 +106,7 @@ for DEVLINE in $(cat /tmp/Partitions | cut -d ':' -f 1-3); do
 
 	if [ "${MOUNTPOINT}" = "swap" ]; then
 		# Activate swap partition(s)
-		/sbin/swapon "${MOUNT_DEVICE}" > "${REDIR}" 2>&1
+		/sbin/swapon "${MOUNT_DEVICE}" >> "${FH_LOG}" 2>&1
 		continue
 	fi # if [ "${MOUNTPOINT}" ...
 	mkdir -p "/mnt${MOUNTPOINT}"

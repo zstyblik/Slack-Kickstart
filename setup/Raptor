@@ -37,12 +37,14 @@ case "${PKG_SRC}" in
 		NFS_CD_Install
 		;;
 	'cdrom')
-		CDROM=$(cat /tmp/CDROM)
-		/bin/mount -o ro -t iso9660 "${CDROM}" /var/log/mount > ${REDIR} 2>&1
+		CDROM=$(cat "${TMP}/CDROM")
+		/bin/mount -o ro -t iso9660 "${CDROM}" \
+			/var/log/mount >> "${FH_LOG}" 2>&1
 		NFS_CD_Install
 		;;
 	*)
-		echo "FATAL ERROR: Invalid PKG source - Aborting"
+		printf "FATAL ERROR: Invalid PKG source - Aborting\n" | \
+			tee -a "${FH_LOG}"
 		FireBugInfo
 		exit 1
 		;;

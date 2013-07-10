@@ -1,13 +1,9 @@
 #!/bin/sh
-#
 # /usr/lib/setup/SeTnetwork
 #
-# Slack-Kickstart 10.2
+# Slack-Kickstart-ng
 #
-# comments to: vonatar@slack-kickstart.org
-# http://www.slack-kickstart.org
-#
-# Last Revision: 13/05/2006 by vonatar
+# Origin: 13/05/2006 by vonatar(http://www.slack-kickstart.org)
 #
 #--------------------------------------------
 # Adds ntpdate at boot
@@ -20,17 +16,16 @@
 # include config file
 #
 . /etc/Kickstart.cfg
-#
+
 # Adds ntpdate at boot
-#
 if [ ! -d /mnt/etc/rc.d/ ]; then
 	mkdir -p /mnt/etc/rc.d
 fi
 
 if [ "${NTPHOST}" ]; then
-	printf "\n\n#\n# ntpdate at boot time\n#\n\n" >> /mnt/etc/rc.d/rc.local
-	echo "/usr/sbin/ntpdate -s ${NTPHOST} && /sbin/hwclock --${HWCLOCK} \
---systohc" >> /mnt/etc/rc.d/rc.local
+	printf "\n# ntpdate at boot time\n" >> /mnt/etc/rc.d/rc.local
+	printf "/usr/sbin/ntpdate -s %s && /sbin/hwclock --%s --systohc"\
+		"${NTPHOST}" "${HWCLOCK}" >> /mnt/etc/rc.d/rc.local
 	if [ -d /mnt/etc/cron.hourly ]; then
 		cat > /mnt/etc/cron.hourly/ntp.sh << EON
 #!/bin/sh
@@ -39,33 +34,30 @@ if [ "${NTPHOST}" ]; then
 EON
 
 		chmod +x /mnt/etc/cron.hourly/ntp.sh
-  fi # if -d /mnt/etc...
+	fi # if -d /mnt/etc...
 fi # if $NTPHOST
-#
+
 # Network Configuration
-#
-printf "%s\n" ${HOSTNAME} > /mnt/etc/HOSTNAME
+printf -- "%s\n" "${HOSTNAME}" > /mnt/etc/HOSTNAME
 cp /mnt/etc/rc.d/rc.inet1.conf /mnt/etc/rc.d/rc.inet1.conf.orig
-#
+
 # Network configuration: 
-#
 # a new etc/rc.d/rc.inet1.conf is created 
 # based on /etc/Kickstart.cfg network parameters
 # but first, we need to assign the correct value,
 # depending on $ETH
-#
 awk -f /usr/lib/setup/GetNetSettings.awk \
-	/etc/Kickstart.cfg > /tmp/NetworkSettings
+	/etc/Kickstart.cfg > "${TMP}/NetworkSettings"
 #
-rm -f /tmp/Nameservers
-for NS in $(grep -E -e '^NAMESERVER=' /tmp/NetworkSettings | \
+rm -f "${TMP}/Nameservers"
+for NS in $(grep -E -e '^NAMESERVER=' "${TMP}/NetworkSettings" | \
 	cut -d '=' -f 2); do
-	printf "nameserver %s" "${NS}" >> /tmp/Nameservers
+	printf "nameserver %s" "${NS}" >> "${TMP}/Nameservers"
 done # for NS
 #
-if [ -e /tmp/NetworkSettings ]; then
-	cut -d ',' -f 2- /tmp/NetworkSettings > /tmp/NetworkSettings.sh
-	. /tmp/NetworkSettings.sh
+if [ -e "${TMP}/NetworkSettings" ]; then
+	cut -d ',' -f 2- "${TMP}/NetworkSettings" > "${TMP}/NetworkSettings.sh"
+	. "${TMP}/NetworkSettings.sh"
 fi
 IFNAME0=${IFNAME0:-""}
 INET0=${INET0:-""}
@@ -92,7 +84,7 @@ DHCP3=${DHCP3:-""}
 DHCPHOSTNAME3=${DHCPHOSTNAME3:-""}
 #
 GW=${GW:-""}
-#-----------------------------------------------------------------------------------
+
 # TODO ~ this is really not good, since it's not universal enough.
 cat << EOP > /mnt/etc/rc.d/rc.inet1.conf
 # /etc/rc.d/rc.inet1.conf
@@ -185,17 +177,13 @@ DEBUG_ETH_UP="no"
                                 # IWPRIV parameter (space-separated, see the
                                 # example).
 EOP
-#-----------------------------------------------------------------------------------
-#
-# - Sets Nameservers info
-# - Sets hostname in /etc/hosts
-#
+
+# Set Nameservers and Hostname in /etc/hosts
 if [ "${DHCP0}" != "yes" ]; then
-	cat /tmp/Nameservers >> /mnt/etc/resolv.conf
+	cat "${TMP}/Nameservers" >> /mnt/etc/resolv.conf
 	printf "%s		%s %s.%s\n" ${INET0} ${HOSTNAME} ${HOSTNAME} \
 		${DOMAIN}>> /mnt/etc/hosts
 else
-	#
 	# Needed for Autoupdates & post-install.sh
 	if [ -e /etc/resolv.conf ]; then
 		cat /etc/resolv.conf > /mnt/etc/resolv.conf

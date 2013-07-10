@@ -18,17 +18,18 @@
 # includes common functions
 . /usr/lib/setup/include/functions.inc
 #
-awk -f /usr/lib/setup/GetBootinfo.awk /etc/Kickstart.cfg > /tmp/Bootinfo
+awk -f /usr/lib/setup/GetBootinfo.awk /etc/Kickstart.cfg > "${TMP}/Bootinfo"
 # Moving created fstab to destination disk
-mv /tmp/fstab /mnt/etc/fstab
+mv "${TMP}/fstab" /mnt/etc/fstab
 touch /mnt/etc/mtab
-LOCATION=$(grep -e '^LOCATION=' /tmp/Bootinfo | cut -d '=' -f 2)
+LOCATION=$(grep -e '^LOCATION=' "${TMP}/Bootinfo" | awk -F'=' '{ print $2 }')
 # Note: this is for PXE boots which won't need any bootloader
 if [ ! -e /mnt/sbin/lilo ] || [ ! -x /mnt/sbin/lilo ] \
 	|| [ "${LOCATION}" = 'none' ]; then
-	printf "\nLILO not found or not executable.\n"
-	printf "You forgot to install LILO or installing PXE machine.\n"
-	printf "Skipping LILO installation.\n\n"
+	printf "\nLILO not found or not executable.\n" | tee -a "${FH_LOG}"
+	printf "Either you haven't installed LILO\n" | tee -a "${FH_LOG}"
+	printf "or you're installing PXE machine.\n" | tee -a "${FH_LOG}"
+	printf "Skipping LILO installation.\n\n" | tee -a "${FH_LOG}"
 	exit 0
 fi # if [ ! -e /mnt/sbin/lilo
 #
@@ -41,7 +42,7 @@ if [ ! -d /mnt/boot ]; then
 	mkdir /mnt/boot
 fi
 if [ "${KERN}" = "bzImage" ]; then 
-	KVERSION=$(uname -a | cut -d " " -f 3)
+	KVERSION=$(uname -a | awk -F' ' '{ print $3 }')
 	KNAME="vmlinuz-${KVERSION}"
 	mv "/mnt/boot/${KERN}" "/mnt/boot/${KNAME}"
 else
@@ -51,16 +52,18 @@ fi # if [ "${KERN}" ...
 if [ -z "${ROOTPART}" ]; then
 	ROOTPART=$(Get_Root_Partition)
 	if [ -z "${ROOTPART}" ]; then
-		printf "\nRoot Partition not set - Aborting.\n"
+		printf "\nRoot Partition not set - Aborting.\n" | \
+			tee -a "${FH_LOG}"
 		FireBugInfo
 		exit 1
 	fi # if [ -z "${ROOTPART}" ]
 fi # if [ -z "${ROOTPART}" ]
-BOOTDEV=$(grep -e '^BOOTDEV=' /tmp/Bootinfo | cut -d '=' -f 2)
+BOOTDEV=$(grep -e '^BOOTDEV=' "${TMP}/Bootinfo" | awk -F'=' '{ print $2 }')
 if [ -z "${BOOTDEV}" ]; then
-	BOOTDEV=$(cut -d ':' -f 1 /tmp/Partitions | head -n 1)
+	BOOTDEV=$(awk -F':' '{ print $1 }' "${TMP}/Partitions" | head -n 1)
 	if [ -z "${BOOTDEV}" ]; then
-		printf "\nBOOTDEV not found. Unable to install LILO.\n\n"
+		printf "\nBOOTDEV not found. Unable to install LILO.\n\n" |\
+			tee -a "${FH_LOG}"
 		FireBugInfo
 		exit 1
 	fi # if [ -z "${BOOTDEV}" ]
@@ -70,7 +73,7 @@ fi # if [ -z "${BOOTDEV}" ]
 # For example:
 #  % sfdisk /dev/hdb -N5
 #  ,,,*
-echo ",,,*" | sfdisk --force ${BOOTDEV} -N1 > ${REDIR} 2>&1
+echo ",,,*" | sfdisk --force ${BOOTDEV} -N1 >> "${FH_LOG}" 2>&1
 #------------------------------------------
 # Creates lilo.conf
 #------------------------------------------
@@ -84,8 +87,9 @@ boot = ${BOOTDEV}
 EOF1
 
 # FIX/Workaround to boot from VirtIO disk
-if printf "%s" "${BOOTDEV}" | grep -q -E -e '/dev/vd[a-z]+'; then
-	printf "disk=${BOOTDEV} bios=0x80 max-partitions=7\n" >> /mnt/etc/lilo.conf
+if printf -- "%s" "${BOOTDEV}" | grep -q -E -e '/dev/vd[a-z]+'; then
+	printf "disk=%s bios=0x80 max-partitions=7\n" \
+		"${BOOTDEV}" >> /mnt/etc/lilo.conf
 fi
 
 cp -apr $BOOTDEV* /mnt/dev/
@@ -118,15 +122,15 @@ EOF2
 # Installs lilo
 #
 clear
-printf "###################\n"
-printf "# Installing LILO #\n"
-printf "###################\n"
-if ! chroot /mnt /sbin/lilo -v 1>/dev/null 2>"${REDIR}" ; then
-	printf "\nFATAL ERROR installing lilo! - Aborting\n"
+printf "###################\n" | tee -a "${FH_LOG}"
+printf "# Installing LILO #\n" | tee -a "${FH_LOG}"
+printf "###################\n" | tee -a "${FH_LOG}"
+if ! chroot /mnt /sbin/lilo -v 1>/dev/null 2>>"${FH_LOG}" ; then
+	printf "\nFATAL ERROR installing lilo! - Aborting\n" |\
+		tee -a "${FH_LOG}"
 	FireBugInfo
 	exit 1
-else
-	printf "\nInstalled.\n\n"
-	sleep 1
 fi # if ! chroot /mnt ...
+printf "\nLILO Installed.\n\n" | tee -a "${FH_LOG}"
+sleep 1
 # EOF

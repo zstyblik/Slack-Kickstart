@@ -30,17 +30,18 @@ cd /mnt/usr/Download
 # slapt-get from:
 # http://software.jaos.org
 #
-echo "Package updates from slapt-get"
-echo "Downloading slapt-get from\n\n http://software.jaos.org "
+printf "Package updates from slapt-get\n" | tee -a "${FH_LOG}"
+printf "Downloading slapt-get from http://software.jaos.org" |\
+	tee -a "${FH_LOG}"
 
-if ! wget "${SLAPTGET}" 1 > ${REDIR} 2>&1 ; then
-	echo "ERROR downloading slapt-get - Skipping Autoupdates!" | \
-		tee /mnt/var/log/slapt-get.log
+if ! wget "${SLAPTGET}" >> "${FH_LOG}" 2>&1 ; then
+	printf "ERROR downloading slapt-get - Skipping Autoupdates!\n" | \
+		tee -a /mnt/var/log/slapt-get.log
 	touch /tmp/Kickstart.END
 	exit 0
 fi
 SLAPTPKG=$(basename "${SLAPTGET}")
-/usr/lib/setup/installpkg --root /mnt "${SLAPTPKG}"
+/usr/lib/setup/installpkg --root /mnt "${SLAPTPKG}" 2>&1 | tee -a "${FH_LOG}"
 #
 # If PKG Repository is NFS, is better to point
 # to HTTP or FTP backup PKG servers. 
@@ -88,7 +89,7 @@ echo "####################################"
 echo
 
 echo "Updating PKG list: "
-/usr/sbin/slapt-get --update | tee /var/log/slapt-get.log
+/usr/sbin/slapt-get --update | tee -a /var/log/slapt-get.log
 
 #
 # PKG upgrade
