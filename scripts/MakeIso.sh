@@ -34,6 +34,30 @@ BSDIR="${WORKDIR}/Kickstart"
 ISODIR="${WORKDIR}/Kickstart/tmp"
 RDSIZE=${RDSIZE:-65536}
 
+if [ $# -lt 2 ]; then
+	printf "Usage: %s <initrd_image> <kernel> [Slackware_CD]\n" \
+		$(basename -- "${0}") 1>&2
+	exit 1
+fi
+# Utilities ~ Find utils that we need
+MKISOFS=$(which mkisofs 2>/dev/null | head -n 1)
+if [ -z "${MKISOFS}" ]; then
+	printf "\nFatal error: cannot find 'mkisofs'\n" 1>&2
+	printf "\nHINT: Check if package 'cdrtools' is installed\n\n" 1>&2
+	exit 1
+fi
+ISOLINUXBIN=${ISOLINUXBIN:-"/usr/share/syslinux/isolinux.bin"}
+if [ ! -e "${ISOLINUXBIN}" ]; then
+	#try to find it...
+	ISOLINUXBIN=$(locate isolinux.bin 2>/dev/null | head -n 1)
+fi
+if [ -z "${ISOLINUXBIN}" ] || [ ! -e "${ISOLINUXBIN}" ]; then
+	printf "Required file 'isolinux.bin' couldn't be found.\n" 1>&2
+	printf "If it's not located in '/usr/share/syslinux/' then \n" 1>&2
+	printf "export path to isolinux.bin in variable 'ISOLINUXBIN'.\n" 1>&2
+	exit 1
+fi
+
 if [ ! -d "${WORKDIR}/Kickstart/tmp" ]; then
 	printf "Creating workdir '${WORKDIR}'..."
 	if mkdir -p "${WORKDIR}/Kickstart/tmp" > /dev/null 2>&1 ; then
@@ -41,71 +65,38 @@ if [ ! -d "${WORKDIR}/Kickstart/tmp" ]; then
 	else
 		printf "\t[ FAIL ]\n"
 		MYSELF=$(whoami)
-		printf "\nError creating work directory '%s' !\n\n" ${BSDIR}
-		printf "Create '%s' with root, and change \n" ${BSDIR}
-		printf "permissions to 'Kickstart' subdirectory: \n\n"
-		printf " chown %s:users '%s'\n\n" ${MYSELF} ${BSDIR}
+		printf "\nError creating work directory '%s' !\n\n" "${BSDIR}" 1>&2
+		printf "Create '%s' with root, and change \n" "${BSDIR}" 1>&2
+		printf "permissions to 'Kickstart' subdirectory: \n\n" 1>&2
+		printf " chown %s:users '%s'\n\n" "${MYSELF}" "${BSDIR}" 1>&2
 		exit 1
 	fi
-fi
-######################################
-# Utilities ~ Find utils that we need
-######################################
-if [ ! -f $(which mkisofs) ]; then
-	printf "\nFatal error: cannot find 'mkisofs'\n"
-	printf "\nHINT: Check if package 'cdrtools' is installed\n\n"
-	exit 1
-fi
-MKISOFS=$(which mkisofs)
-if [ ! -x "${MKISOFS}" ]; then
-	echo "You need to have mkisofs in your path."
-	exit 1
-fi
-
-ISOLINUXBIN=${ISOLINUXBIN:-"/usr/share/syslinux/isolinux.bin"}
-if [ ! -e "${ISOLINUXBIN}" ]; then
-	#try to find it...
-	ISOLINUXBIN=$(locate isolinux.bin | head -n 1)
-fi
-while [ ! -e "${ISOLINUXBIN}" ]; do
-	echo "Required file '${ISOLINUXBIN}' couldn't be found."
-	echo "If it's not located in '/usr/share/syslinux/' then "
-	echo "export path to isolinux.bin in variable 'ISOLINUXBIN'."
-	exit 1
-done
-#
-# Get the kernel
-#
-if [ $# -lt 2 ]; then
-	printf "Usage: %s <initrd_image> <kernel> [Slackware_CD]\n" ${0}
-	exit 1
 fi
 
 INITRDIMG=${1:-''}
 if [ ! -e "${INITRDIMG}" ]; then
-	printf "\nError: Cannot find initrd image '%s'.\n\n" ${INITRDIMG}
+	printf "\nError: Cannot find initrd image '%s'.\n\n" "${INITRDIMG}" 1>&2
 	exit 1
 fi
-
 if file "${INITRDIMG}" | grep -q -e "gzip compressed data" ; then
 	# OK
 	true
 else
-	printf "\nError: Not an initrd image '%s'!\n\n" ${INITRDIMG}
+	printf "\nError: Not an initrd image '%s'!\n\n" "${INITRDIMG}" 1>&2
 	exit 1
 fi
 KERNEL=${2:-''}
 if [ ! -e "${KERNEL}" ]; then
-	printf "\nError: Cannot find kernel '%s'\n\n" ${KERNEL}
+	printf "\nError: Cannot find kernel '%s'\n\n" "${KERNEL}" 1>&2
 	exit 1
 fi
 if file "${KERNEL}" | \
 	awk "{ if (/Linux/ && /kernel/ && /x86/) print \$1; }" | \
 	grep -q -E -e '^.+$' ; then
-	# dummy
+	# OK
 	true
 else
-	printf "\nError: Not a Slackware kernel '%s'!\n\n" ${KERNEL}
+	printf "\nError: Not a Slackware kernel '%s'!\n\n" "${KERNEL}" 1>&2
 	exit 1
 fi
 
@@ -147,7 +138,8 @@ if [ $# -eq 3 ]; then
 	if [ "${PKG_REP}" = "cdrom" ]; then
 		SLACKCD=${3:-''}
 		if [ ! -e "${SLACKCD}/CHECKSUMS.md5" ]; then
-			printf "\nCannot find Slackware CD on '%s' - Aborting\n\n" ${SLACKCD}
+			printf "\nCannot find Slackware CD on '%s' - Aborting\n\n" \
+				"${SLACKCD}" 1>&2
 			exit 1
 		fi
 		if [ -d "${SLACKCD}/slackware" ]; then
@@ -156,7 +148,7 @@ if [ $# -eq 3 ]; then
 			LIBDIRSUFFIX=64
 		else
 			printf "\nDirectory '%s/slackware' nor '%s/slackware64' found.\n\n" \
-				${SLACKCD} ${SLACKCD}
+				"${SLACKCD}" "${SLACKCD}" 1>&2
 			exit 1
 		fi
 		#
@@ -175,7 +167,7 @@ if [ $# -eq 3 ]; then
 		fi
 		if [ ! -s "./taglists/${TAGFILE}" ]; then
 			printf "FATAL ERROR - File './taglists/%s' doesn't seem to exist.\n" \
-				"${TAGFILE}"
+				"${TAGFILE}" 1>&2
 			exit 1
 		fi
 		for PACKAGE in $(grep -v -e '^#' "./taglists/${TAGFILE}" | \
@@ -207,4 +199,4 @@ printf "------------------------------------------------\n"
 rm -rf "${ISODIR}"
 
 printf "\nISO image '%s/%s' created with success: now burn it with your \
-favorite tool!\n\n" ${BSDIR} ${CD_IMAGE}
+favorite tool!\n\n" "${BSDIR}" "${CD_IMAGE}"
