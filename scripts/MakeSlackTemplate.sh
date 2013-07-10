@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # Desc: create template kickstart image for Slack-Kickstart
 # Copyright (C) 2011 Zdenek Styblik
 # 
@@ -22,28 +22,21 @@
 set -e
 set -u
 
-CWD=$(dirname "$0")
-if [ "${CWD}" = '.' ]; then
-	CWD=$(pwd)
-fi
-
+KS_ROOT="${KS_ROOT:?Variable KS_ROOT not set.}"
+SCRIPT_NAME=$(basename -- "${0}")
 # Note: http://www.busybox.net/downloads/binaries/latest/
-# or provide busybox Slackware package eg. build from SBo
+# or provide busybox Slackware package, eg. built from SBo
 BUSYBOXFILE=${BUSYBOXFILE:-'/tmp/busybox-x86_64 '}
 DROPBEARVER=${DROPBEARVER:-''}
 LIBDIRSUFFIX=${LIBDIRSUFFIX:-''}
-IMAGEFSDIR=${IMAGEFSDIR:-"${CWD}/../imagefs"}
 INITRDMOUNT=${INITRDMOUNT:-'/mnt/initrd'}
-SLACKCDPATH=${SLACKCDPATH:-'/mnt/cdrom/'}
+SLACKCDPATH="${SLACKCDPATH:-'/mnt/cdrom/'}"
 TMPDIR=${TMPDIR:-'/tmp'}
-ERROR_LOG=${ERROR_LOG:-"${TMPDIR}/${0}.err.log"}
+ERROR_LOG=${ERROR_LOG:-"${TMPDIR}/${SCRIPT_NAME}.err.log"}
 
 # Ramdisk Constants
 RDSIZE=${RDSIZE:-65536}
 BLKSIZE=1024
-
-SCRIPTNAME=$(basename "${0}")
-PREFIX="$(dirname "${SCRIPTNAME}")"
 
 rm -f "${ERROR_LOG}"
 mv "${ERROR_LOG}" "${ERROR_LOG}.old" 2>/dev/null || true
@@ -75,8 +68,8 @@ getlibs()
 		return 1
 	fi
 	for LIBLINE in $(ldd "${BINARY}" | tr ' ' '#'); do
-		printf "%s\n" ${LIBLINE} | grep -q -e 'linux-vdso' && continue;
-		printf "%s\n" ${LIBLINE} | grep -q -e 'linux-gate' && continue;
+		printf -- "%s\n" ${LIBLINE} | grep -q -e 'linux-vdso' && continue;
+		printf -- "%s\n" ${LIBLINE} | grep -q -e 'linux-gate' && continue;
 		if printf "${LIBLINE}" | awk -F'#' '{ print $1 }' | grep -q -e '^/' ; then
 			LIBTOCOPY=$(printf "%s\n" ${LIBLINE} | awk -F'#' '{ print $1 }');
 			LIBDIR=$(dirname "${LIBTOCOPY}")
@@ -93,10 +86,11 @@ getlibs()
 			if file "${LIBTOCOPY}" | grep -q -e 'symbolic link' ; then
 				LIBREAL=$(file "${LIBTOCOPY}" | cut -d '`' -f 2 | tr -d "'")
 				cp -apr "${LIBDIR}/${LIBREAL}" "${INITRDMOUNT}/${LIBDIR}"
-				pushd "${INITRDMOUNT}/${LIBDIR}"
+				cwd_old=$(pwd)
+				cd "${INITRDMOUNT}/${LIBDIR}"
 				LIBLINK=$(basename "${LIBTOCOPY}")
 				ln -s "${LIBREAL}" "${LIBLINK}" || exit
-				popd
+				cd "${cwd_old}"
 			else
 				cp -apr "${LIBTOCOPY}" "${INITRDMOUNT}/${LIBDIR}"
 			fi
@@ -106,7 +100,7 @@ getlibs()
 			LIBPOINTER=$(printf "%s\n" ${LIBLINE} | awk -F'#' '{ print $3 }')
 			LIBREAL=$(file "${LIBPOINTER}" | cut -d '`' -f 2 | tr -d "'")
 			LIBDIR=$(dirname "${LIBPOINTER}")
-			LIBLINK=$(printf "%s\n" ${LIBLINE} | awk -F'#' '{ print $1 }')
+			LIBLINK=$(printf -- "%s\n" ${LIBLINE} | awk -F'#' '{ print $1 }')
 			if [ -z "${LIBREAL}" -o -z "${LIBLINK}" ]; then
 				log_error "WARN: failed to to automagically copy lib dep for '${BINARY}'"
 				continue
@@ -116,11 +110,12 @@ getlibs()
 			fi
 			cp -apr "${LIBDIR}/${LIBREAL}" "${INITRDMOUNT}/${LIBDIR}";
 			LIBREALNAME=$(basename "${LIBREAL}");
-			pushd "${INITRDMOUNT}/${LIBDIR}";
-			if [ ! -e "${LIBLINK}" ]; then
+			cwd_old=$(pwd)
+			cd "${INITRDMOUNT}/${LIBDIR}";
+			if [ ! -e "${LIBLINK}" ] && [ ! -h "${LIBLINK}" ]; then
 				ln -s "${LIBREALNAME}" "${LIBLINK}" || exit;
 			fi
-			popd
+			cd "${cwd_old}"
 			continue
 		fi
 	done
@@ -152,7 +147,7 @@ parse_package()
 	fi
 	if [ ! -e "${SLACKCDPATH}/CHECKSUMS.md5" ]; then
 		log_error "File '${SLACKCDPATH}/CHECKSUMS.md5' doesn't seem to exist."
-		echo ""
+		printf "\n"
 		return 1
 	fi
 	PKGFOUND=$(grep -e "${PKGNEEDLE}"  "${SLACKCDPATH}/CHECKSUMS.md5" | \
@@ -160,46 +155,58 @@ parse_package()
 		awk '{ print $2 }')
 	if [ -z "${PKGFOUND}" ]; then
 		log_error "No PKG found for needle '${PKGNEEDLE}'."
-		echo ""
+		printf "\n"
 		return 1
 	fi
-	printf "%s/%s\n" ${SLACKCDPATH} ${PKGFOUND}
+	printf -- "%s/%s\n" ${SLACKCDPATH} ${PKGFOUND}
 	return 0
 } # parse_package
 # DESC: show help text
 show_help() 
 {
-	echo "Usage: ${0} <CFG> <KERNEL_PKG|BZIMG>"
-	printf "\nMake sure you have set variables BUSYBOXFILE and SLACKCDPATH!\n"
-	echo "Help haven't been written yet."
+	printf "Usage: %s <CFG> <KERNEL_PKG|BZIMG>\n" "${SCRIPT_NAME}"
+	printf "\nMake sure you have set following env. variables:\n"
+	printf "KS_ROOT - PATH to Slack-Kickstart directory where,\n"
+	printf "eg. setup/, imagefs/ are\n"
+	printf "BUSYBOXFILE - PATH to pre-compiled Busybox or Busybox package\n"
+	printf "SLACKCDPATH - PATH to mounted Slackware install CD/DVD-ROM,\n"
+	printf "defaults to /mnt/cdrom\n"
+	printf "\nNote: Dropbear SSH gets compiled from the sources!\n"
 	return 0
 } # show_help
 
 ### MAIN ###
+if ! which openssl >/dev/null 2>&1; then
+	printf "OpenSSL is required, but none found in your PATH.\n"
+	exit 1
+fi
+
 KSCONFIG=${1:-''}
 if [ -z "${KSCONFIG}" ]; then
 	show_help
 	exit 1
 fi
-
 if [ ! -e "${KSCONFIG}" ]; then
-	echo "File '${KSCONFIG}' doesn't seem to exist or not readable." 1>&2
+	printf "File '%s' doesn't seem to exist or not readable.\n" \
+		"${KSCONFIG}" 1>&2
 	exit 1
 fi
-. "${KSCONFIG}"
-TIMEZONE=${TIMEZONE:-'Universal'}
-PASSWDENC=$(openssl passwd -1 "${PASSWD}")
 
 BZIMG=${2:-''}
 if [ -z "${BZIMG}" ]; then
 	show_help
 	exit 1
 fi
-
 if [ ! -e "${BZIMG}" ]; then
-	echo "File '${BZIMG}' doesn't seem to exist or not readable." 1>&2
+	printf "File '%s' doesn't seem to exist or not readable.\n" \
+		"${BZIMG}" 1>&2
 	exit 1
 fi # if [ ! -e "${BZIMG}" ]
+
+. "${KSCONFIG}"
+TIMEZONE=${TIMEZONE:-'Universal'}
+PASSWDENC=$(openssl passwd -1 "${PASSWD}")
+
 if [ ! -e "${BUSYBOXFILE}" ]; then
 	printf "ERROR: Busybox not found '%s'.\n" "${BUSYBOXFILE}" 1>&2
 	printf "ERROR: Busybox is mandatory. Unable to continue.\n" 1>&2
@@ -215,8 +222,8 @@ if [ -z "${DROPBEARVER}" ]; then
 	iend = index(part, ".tar.bz2"); \
 	if (ibegin == 0 || iend == 0) { next } \
 	part = substr(part, 0, iend-1); \
-	print part; \
-}' | sort | tail -n 1 | cut -d '-' -f 2-)
+	print part; }' |\
+	sort | tail -n 1 | cut -d '-' -f 2-)
 	if [ -z "${DROPBEARVER}" ]; then
 		printf "ERROR: Unable to determine Dropbear version.\n" 1>&2
 		exit 1
@@ -229,13 +236,14 @@ fi # if [ ! -e "${TMPDIR}/dropbear-${DROPBEARVER}.tar.bz2" ]
 
 # Housekeeping...
 if mount | grep -q -e "${INITRDMOUNT}" ; then
-	echo "Initrd dir '${INITRDMOUNT}' already mounted." 1>&2
+	printf  "Initrd dir '%s' already mounted.\n" "${INITRDMOUNT}" 1>&2
 	exit 1
 fi
 
 if [ ! -d "${IMAGEFSDIR}" ]; then
 	if [ ! -d "../${IMAGEFSDIR}" ]; then
-		echo "I couldn't locate './imagefs' neither '../imagefs' dir" 1>&2
+		printf "I couldn't locate './imagefs' neither '../imagefs' dir\n" 1>&2
+		printf "Perhaps '%s' doesn't exist?\n" "${IMAGEFSDIR}" 1>&2
 		exit 1
 	else
 		IMAGEFSDIR="../${IMAGEFSDIR}"
@@ -247,8 +255,8 @@ if [ -d "${SLACKCDPATH}/slackware" ]; then
 elif [ -d "${SLACKCDPATH}/slackware64" ]; then
 	LIBDIRSUFFIX=64
 else
-	echo "No '${SLACKCDPATH}/slackware' nor '${SLACKCDPATH}/slackware64' found." \
-		1>&2
+	printf "No '%s/slackware' nor '%s/slackware64' found.\n" \
+		"${SLACKCDPATH}" "${SLACKCDPATH}" 1>&2
 	exit 1
 fi
 # Note: hope the following is sufficient for 98% of cases.
@@ -259,11 +267,12 @@ if printf "%s" "${BZIMGTYPE}" | grep -q -e 'XZ' -e 'gzip' ; then
 	mkdir "${TMPDIR}/slack-kernel"
 	BZIMGPATH=$(dirname "${BZIMG}")
 	BZIMGPATH="${BZIMGPATH}/${BZIMG}"
-	pushd "${TMPDIR}/slack-kernel"
+	cwd_old=$(pwd)
+	cd "${TMPDIR}/slack-kernel"
 	explodepkg "${BZIMG}"
 	KERNELVER=$(find ./ -name vmlinuz* -print0 | xargs -0 strings | \
 		grep -E -e '^(2|3)\.[0-9]+(\.[0-9]+(\.[0-9]+)?)' | awk '{ print $1 }')
-	popd
+	cd "${cwd_old}"
 elif printf "%s" "${BZIMGTYPE}" | grep -q -e 'Linux kernel' ; then
 	KERNELVER=$(strings "${BZIMG}" | \
 		grep -E -e '^(2|3)\.[0-9]+(\.[0-9]+(\.[0-9]+))' | awk '{ print $1 }')
@@ -323,7 +332,8 @@ else
 	cp "${BUSYBOXFILE}" "${INITRDMOUNT}/bin/"
 fi # 
 # Grab busybox and create the symbolic links
-pushd "${INITRDMOUNT}"
+cwd_old=$(pwd)
+cd "${INITRDMOUNT}"
 getlibs bin/busybox
 for CMD in $(./bin/busybox --list-ful); do
 	CMDDIR=$(dirname "${CMD}")
@@ -337,7 +347,7 @@ for CMD in $(./bin/busybox --list-ful); do
 done
 # clean up ~ it's hard to say where this came from
 rm -f sbin/bin
-popd
+cd "${cwd_old}"
 #### /dev ~ Grab the necessary dev files
 cp -a /dev/console "${INITRDMOUNT}/dev"
 cp -a /dev/ramdisk "${INITRDMOUNT}/dev" 2>/dev/null || \
@@ -383,7 +393,7 @@ fi # if [ -z "${KMODULESPKG}" ]
 if [ -e "${BZIMGDIR}/modules.sh" ]; then
 	MODULES_FILE="${BZIMGDIR}/modules.sh"
 else
-	MODULES_FILE="${CWD}/../kernels/modules.sh"
+	MODULES_FILE="${KS_ROOT}/kernels/modules.sh"
 fi
 if [ -e "${MODULES_FILE}" ]; then
 	. "${MODULES_FILE}"
@@ -393,9 +403,10 @@ if [ -e "${MODULES_FILE}" ]; then
 	explodepkg "${KMODULESPKG}" 1>/dev/null
 	#
 	get_kmodules
-	pushd "${INITRDMOUNT}"
+	cwd_old=$(pwd)
+	cd "${INITRDMOUNT}"
 	depmod -b ./ "${KERNELVERNO}"
-	popd
+	cd "${cwd_old}"
 else
 	log_error "WARN: File '%s' doesn't seem to exist.\n" "${MODULES_FILE}" 1>&2
 	log_error "WARN: No kernel modules will be copied to INITRD.\n" 1>&2
@@ -403,21 +414,23 @@ fi # if [ -e "${BZIMGDIR}/modules.sh" ]
 #### udev
 UDEVPKG=$(parse_package 'udev-')
 if [ ! -z "${UDEVPKG}" ]; then
-	echo "Installing package '${UDEVPKG}'"
-	pushd "${INITRDMOUNT}"
+	printf "Installing package '%s'\n" "${UDEVPKG}"
+	cwd_old=$(pwd)
+	cd "${INITRDMOUNT}"
 	explodepkg "${UDEVPKG}" 1>/dev/null
 	sh ./install/doinst.sh
 	rm -rf './install'
 	getlibs sbin/udevd
 	getlibs sbin/udevadm
 	clean_usr
-	popd
+	cd "${cwd_old}"
 fi # if $UDEVPKG
 #### etc
 SLACKETCPKG=$(parse_package 'etc-')
 if [ ! -z "${SLACKETCPKG}" ]; then
-	echo "Installing package '${SLACKETCPKG}'"
-	pushd "${INITRDMOUNT}"
+	printf "Installing package '%s'\n" "${SLACKETCPKG}"
+	cwd_old=$(pwd)
+	cd "${INITRDMOUNT}"
 	explodepkg "${SLACKETCPKG}" 1>/dev/null
 	sh ./install/doinst.sh
 	rm -rf ./install/
@@ -429,7 +442,7 @@ if [ ! -z "${SLACKETCPKG}" ]; then
 	cp /etc/networks etc/
 	rm -f etc/termcap-BSD
 	clean_usr
-	popd
+	cd "${cwd_old}"
 fi # if SLACKETCPKG
 #### elf libs
 #ELFPKG=$(parse_package 'aaa_elflibs-')
@@ -452,37 +465,69 @@ if [ ! -z "${GLIBCSOPKG}" ]; then
 	# There is no ldconfig; get symlinks from post-install script then
 	grep -E -e 'ln -sf' -e 'rm -rf [A-Za-z0-9]+' \
 		install/doinst.sh > "${INITRDMOUNT}/mydoinst.sh"
-	pushd "${INITRDMOUNT}"
+	cwd_old=$(pwd)
+	cd "${INITRDMOUNT}"
 	sh mydoinst.sh
 	rm -f mydoinst.sh
-	popd
+	cd "${cwd_old}"
 	cd "${TMPDIR}"
 	rm -rf "${TMPDIR}/slack-glibc-solibs"
 fi # if GLIBCSOPKG
-#### modutils
-# Note: this is an isurance of module auto-loading; feature you *can* live 
-# without.
-MODULEINITPKG=$(parse_package 'module-init-tools-')
-if [ ! -z "${MODULEINITPKG}" ]; then
-	pushd "${INITRDMOUNT}"
-	rm ./sbin/depmod
-	rm ./sbin/insmod
-	rm ./sbin/lsmod
-	rm ./sbin/modinfo
-	rm ./sbin/modprobe
-	rm ./sbin/rmmod
-	explodepkg "${MODULEINITPKG}" 1>/dev/null
-	getlibs sbin/lsmod
-	getlibs sbin/depmod
-	getlibs sbin/insmod
-	getlibs sbin/lsmod
-	getlibs sbin/rmmod
-	getlibs sbin/modprobe
-	getlibs sbin/modinfo
-	rm -rf ./install
-	clean_usr
-	popd
-fi # if MODULEINITPKG
+#### kmod
+KMODPKG=$(parse_package 'kmod-9' || true)
+if [ ! -z "${KMODPKG}" ]; then
+	cwd_old=$(pwd)
+	cd "${INITRDMOUNT}"
+	rm -f ./bin/lsmod
+	rm -rf ./sbin/modinfo
+	rm -rf ./sbin/rmmod
+	ln -sf ./sbin/kmod ./sbin/rmmod
+	rm -rf ./sbin/insmod
+	rm -rf ./sbin/modprobe
+	rm -rf ./sbin/lsmod
+	rm -rf ./sbin/depmod
+	rm -rf ./lib64/libkmod.so.2
+	rm -rf ./usr/lib64/libkmod.so
+	explodepkg "${KMODPKG}" 1>/dev/null
+	( cd ./bin ; ln -sf /sbin/lsmod lsmod )
+	( cd ./sbin ; ln -sf kmod modinfo )
+	( cd ./sbin ; ln -sf kmod rmmod )
+	( cd ./sbin ; ln -sf kmod insmod )
+	( cd ./sbin ; ln -sf kmod modprobe )
+	( cd ./sbin ; ln -sf kmod lsmod )
+	( cd ./sbin ; ln -sf kmod depmod )
+	( cd ./lib64 ; ln -sf libkmod.so.2.1.3 libkmod.so.2 )
+	( cd ./usr/lib64 ; ln -sf ../../lib64/libkmod.so.2 libkmod.so )
+	cd "${cwd_old}"
+else
+	#### modutils
+	# Note: this is an isurance of module auto-loading; feature you
+	# *can* live without.
+	# Note2: modutils ceased to exist with slackware64-14.0. This is
+	# a fallback in case kmod can't be found.
+	MODULEINITPKG=$(parse_package 'module-init-tools-')
+	if [ ! -z "${MODULEINITPKG}" ]; then
+		cwd_old=$(pwd)
+		cd "${INITRDMOUNT}"
+		rm ./sbin/depmod
+		rm ./sbin/insmod
+		rm ./sbin/lsmod
+		rm ./sbin/modinfo
+		rm ./sbin/modprobe
+		rm ./sbin/rmmod
+		explodepkg "${MODULEINITPKG}" 1>/dev/null
+		getlibs sbin/lsmod
+		getlibs sbin/depmod
+		getlibs sbin/insmod
+		getlibs sbin/lsmod
+		getlibs sbin/rmmod
+		getlibs sbin/modprobe
+		getlibs sbin/modinfo
+		rm -rf ./install
+		clean_usr
+		cd "${cwd_old}"
+	fi # if MODULEINITPKG
+fi # if KMODPKG`
 #### Dropbear
 cd "${TMPDIR}"
 rm -rf "dropbear-${DROPBEARVER}"
@@ -491,16 +536,18 @@ cd "dropbear-${DROPBEARVER}"
 ./configure --prefix=/usr 2>&1 >/dev/null || exit 101
 make 2>&1 >/dev/null || exit 102
 make install DESTDIR="${INITRDMOUNT}" 2>&1 >/dev/null || exit 103
-pushd "${INITRDMOUNT}"
+cwd_old=$(pwd)
+cd "${INITRDMOUNT}"
 getlibs ./usr/bin/dbclient
 getlibs ./usr/bin/dropbearconvert
 getlibs ./usr/bin/dropbearkey
 getlibs ./usr/sbin/dropbear
-popd
+cd "${cwd_old}"
 #### Setup
-pushd "${INITRDMOUNT}"
+cwd_old=$(pwd)
+cd "${INITRDMOUNT}"
 mkdir -p ./usr/lib/setup 2>/dev/null
-cp -r ${CWD}/../setup/* ./usr/lib/setup/
+cp -r ${KS_ROOT}/setup/* ./usr/lib/setup/
 cat > ./usr/sbin/setup << EOF
 #!/bin/ash
 cd /usr/lib/setup
@@ -511,29 +558,32 @@ chmod +x ./usr/sbin/setup
 sed -r -e "s#^PASSWD=.*\$#PASSWD='${PASSWDENC}'#" \
 	"${KSCONFIG}" > etc/Kickstart.cfg
 # makedevs.sh is being copied from imagefs dir
-if [ ! -z "${TAG}" ] && [ -e "${CWD}/../taglists/${TAG}" ]; then
-	printf "Adding TAG-list '${TAG}' of packages ... "
+if [ ! -z "${TAG}" ] && [ -e "${KS_ROOT}/taglists/${TAG}" ]; then
+	printf "Adding TAG-list '%s' of packages ... " "${TAG}"
 	printf "#\n# Taglist: %s\n" "${TAG}" >> etc/Kickstart.cfg
-	awk '{ printf "#@%s\n", $0 }' "${CWD}/../taglists/${TAG}" >> etc/Kickstart.cfg
+	awk '{ printf "#@%s\n", $0 }' \
+		"${KS_ROOT}/taglists/${TAG}" >> etc/Kickstart.cfg
 	printf "# END of Taglist: %s" $TAG >> etc/Kickstart.cfg
 	printf "done\n"
 fi
-popd
+cd "${cwd_old}"
 #### BTRFS
 #BTRFSPKG=$(parse_package 'btrfs-progs-')
 #if [ ! -z "${BTRFSPKG}" ]; then
-#	echo "Installing package '${BTRFSPKG}'"
-#	pushd "${INITRDMOUNT}"
+#	printf "Installing package '%s'\n" "${BTRFSPKG}"
+#	cwd_old=$(pwd)
+#	cd "${INITRDMOUNT}"
 #	explodepkg "${BTRFSPKG}" 1>/dev/null
 #	rm -rf ./usr/man
 #	rm -rf ./usr/doc
-#	popd
+#	cd "${cwd_old}"
 #fi # if BTRFSPKG
 #### EXT utils
 E2FSPKG=$(parse_package 'e2fsprogs-')
 if [ ! -z "${E2FSPKG}" ]; then
-	echo "Installing package '${E2FSPKG}'"
-	pushd "${INITRDMOUNT}"
+	printf "Installing package '%s'\n" "${E2FSPKG}"
+	cwd_old=$(pwd)
+	cd "${INITRDMOUNT}"
 	explodepkg "${E2FSPKG}" 1>/dev/null
 	sh ./install/doinst.sh
 	rm -rf "./usr/lib${LIBDIRSUFFIX}/pkgconfig"
@@ -541,12 +591,12 @@ if [ ! -z "${E2FSPKG}" ]; then
 	rm -rf ./usr/man
 	rm -rf ./usr/share
 	rm -rf ./install
-	popd
+	cd "${cwd_old}"
 fi # if $E2FSPKG
 #### JFS
 JFSPKG=$(parse_package 'jfsutils-')
 if [ ! -z "${JFSPKG}" ]; then
-	echo "Installing package '${JFSPKG}'"
+	printf "Installing package '%s'\n" "${JFSPKG}"
 	rm -rf "${TMPDIR}/slack-jfsutils"
 	mkdir "${TMPDIR}/slack-jfsutils"
 	cd "${TMPDIR}/slack-jfsutils"
@@ -564,7 +614,7 @@ fi # if $JFSPKG
 #### ReiserFS
 REISERFSPKG=$(parse_package 'reiserfsprogs-')
 if [ ! -z "${REISERFSPKG}" ]; then
-	echo "Installing package '${REISERFSPKG}'"
+	printf "Installing package '%s'\n" "${REISERFSPKG}"
 	rm -rf "${TMPDIR}/slack-reiserfs"
 	mkdir "${TMPDIR}/slack-reiserfs"
 	cd "${TMPDIR}/slack-reiserfs"
@@ -582,7 +632,7 @@ fi # if $REISERFSPKG
 #### XFS 
 XFSPKG=$(parse_package 'xfsprogs-')
 if [ ! -z "${XFSPKG}" ]; then
-	echo "Installing package '${XFSPKG}'"
+	printf "Installing package '%s'\n" "${XFSPKG}"
 	rm -rf "${TMPDIR}/slack-xfs"
 	mkdir "${TMPDIR}/slack-xfs"
 	cd "${TMPDIR}/slack-xfs"
@@ -600,7 +650,7 @@ fi # if $XFSPKG
 #### util-linux
 UTILLNXPKG=$(parse_package 'util-linux-')
 if [ ! -z "${UTILLNXPKG}" ]; then
-	echo "Installing package '${UTILLNXPKG}'"
+	printf "Installing package '%s'\n" "${UTILLNXPKG}"
 	cd "${TMPDIR}"
 	rm -rf "${TMPDIR}/slack-util-linux"
 	mkdir "${TMPDIR}/slack-util-linux"
@@ -609,73 +659,79 @@ if [ ! -z "${UTILLNXPKG}" ]; then
 	cp ./sbin/sfdisk "${INITRDMOUNT}/sbin/"
 	cp -apr ./lib${LIBDIRSUFFIX} "${INITRDMOUNT}/"
 	cp -r ./install "${INITRDMOUNT}/"
-	pushd "${INITRDMOUNT}"
+	cwd_old=$(pwd)
+	cd "${INITRDMOUNT}"
 	sh ./install/doinst.sh
 	rm -rf ./install
 	rm -f clock.8.gz 
 	rm -f jaztool.1.gz
-	popd
+	cd "${cwd_old}"
 	cd "${TMPDIR}"
 	rm -rf slack-util-linux
 fi # if $UTILLNXPKG
 #### NFS utils
 NFSPKG=$(parse_package 'nfs-utils-')
 if [ ! -z "${NFSPKG}" ]; then
-	echo "Installing package '${NFSPKG}'"
-	pushd "${INITRDMOUNT}"
+	printf "Installing package '%s'\n" "${NFSPKG}"
+	cwd_old=$(pwd)
+	cd "${INITRDMOUNT}"
 	explodepkg "${NFSPKG}" 1>/dev/null
 	sh ./install/doinst.sh
 	rm -rf ./install
 	clean_usr
-	popd
+	cd "${cwd_old}"
 fi # if $NFSPKG
 #### Portmap/RPC
 PORTMAPPKG=$(parse_package 'portmap-')
 if [ ! -z "${PORTMAPPKG}" ]; then
-	echo "Installing package '${PORTMAPPKG}'"
-	pushd "${INITRDMOUNT}"
+	printf "Installing package '%s'\n" "${PORTMAPPKG}"
+	cwd_old=$(pwd)
+	cd "${INITRDMOUNT}"
 	explodepkg "${PORTMAPPKG}" 1>/dev/null
 	sh ./install/doinst.sh
 	rm -rf ./install
 	clean_usr
-	popd
+	cd "${cwd_old}"
 fi # if $PORTMAPPKG
 #### gzip ~ gzip is shipped with Busybox
 #GZIPPKG=$(parse_package 'gzip-')
 #if [ ! -z "${GZIPPKG}" ]; then
-#	echo "Installing package '${GZIPPKG}'"
-#	pushd "${INITRDMOUNT}"
+#	printf "Installing package '%s'\n" "${GZIPPKG}"
+#	cwd_old=$(pwd)
+#	cd "${INITRDMOUNT}"
 #	explodepkg "${GZIPPKG}" 1>/dev/null
 #	sh ./install/doinst.sh
 #	rm -rf ./install
 #	clean_usr
-#	popd
+#	cd "${cwd_old}"
 #fi # if $GZIPPKG
 #### xz
 XZPKG=$(parse_package 'xz-')
 if [ ! -z "${XZPKG}" ]; then
-	echo "Installing package '${XZPKG}'"
-	pushd "${INITRDMOUNT}"
+	printf "Installing package '%s'\n" "${XZPKG}"
+	cwd_old=$(pwd)
+	cd "${INITRDMOUNT}"
 	explodepkg "${XZPKG}" 1>/dev/null
 	rm -rf ./usr/include/lzma
 	sh ./install/doinst.sh
 	rm -rf ./install
 	clean_usr
-	popd
+	cd "${cwd_old}"
 fi # if $XZPKG
 #### terminfo
 TERMIPKG=$(parse_package 'aaa_terminfo-')
 if [ ! -z "${TERMIPKG}" ]; then
-	echo "Installing package '${TERMIPKG}'"
-	pushd "${INITRDMOUNT}"
+	printf "Installing package '%s'\n" "${TERMIPKG}"
+	cwd_old=$(pwd)
+	cd "${INITRDMOUNT}"
 	explodepkg "${TERMIPKG}" 1>/dev/null
 	rm -rf ./install
-	popd
+	cd "${cwd_old}"
 fi # if $TERMIPKG
 #### coreutils
 COREUTIPKG=$(parse_package 'coreutils-')
 if [ ! -z "${COREUTIPKG}" ]; then
-	echo "Installing package '${COREUTIPKG}'"
+	printf "Installing package '%s'\n" "${COREUTIPKG}"
 	cd "${TMPDIR}"
 	rm -rf "${TMPDIR}/slack-coreutils"
 	mkdir "${TMPDIR}/slack-coreutils"
@@ -692,7 +748,7 @@ if [ ! -z "${TARPKG}" ]; then
 	mkdir "${TMPDIR}/slack-tar"
 	cd "${TMPDIR}/slack-tar"
 	explodepkg "${TARPKG}" 1>/dev/null
-	echo "Installing 'tar-1.13'"
+	printf "Installing 'tar-1.13'\n"
 	cp "${TMPDIR}/slack-tar/bin/tar-1.13" "${INITRDMOUNT}/bin/"
 	cd "${TMPDIR}"
 	rm -rf "${TMPDIR}/slack-tar"
@@ -704,11 +760,12 @@ if [ ! -z "${NTPPKG}" ]; then
 	mkdir "${TMPDIR}/slack-ntp"
 	cd "${TMPDIR}/slack-ntp"
 	explodepkg "${NTPPKG}" 1>/dev/null
-	echo "Installing 'ntpdate'"
+	printf "Installing 'ntpdate'\n"
 	cp usr/sbin/ntpdate "${INITRDMOUNT}/usr/sbin/"
-	pushd "${INITRDMOUNT}"
+	cwd_old=$(pwd)
+	cd "${INITRDMOUNT}"
 	getlibs usr/sbin/ntpdate
-	popd
+	cd "${cwd_old}"
 	cd ${TMPDIR}
 	rm -rf "${TMPDIR}/slack-ntp"
 fi # if $NTPPKG
@@ -716,24 +773,25 @@ fi # if $NTPPKG
 #### Set TZ
 cp -pr ${IMAGEFSDIR}/* "${INITRDMOUNT}/"
 if [ -e "/usr/share/zoneinfo/${TIMEZONE}" ]; then
-	echo "Configuring TZ settings"
+	printf "Configuring TZ settings\n"
 	cat "/usr/share/zoneinfo/${TIMEZONE}" > "${INITRDMOUNT}/etc/localtime"
 fi
 chmod +x ${INITRDMOUNT}/etc/rc.d/rc.*
 #### SSH keys
-if [ -e "${CWD}/../config-files/authorized_keys" ]; then
+if [ -e "${KS_ROOT}/config-files/authorized_keys" ]; then
 	printf "Getting SSH keys\n"
 	mkdir -p "${INITRDMOUNT}/root/.ssh/" "${INITRDMOUNT}/etc/dropbear/"
 	chmod 700 "${INITRDMOUNT}/root/.ssh/" "${INITRDMOUNT}/etc/dropbear/"
 	#
-	cp "${CWD}/../config-files/authorized_keys" "${INITRDMOUNT}/etc/dropbear/"
-	cp "${CWD}/../config-files/authorized_keys" "${INITRDMOUNT}/root/.ssh/"
+	cp "${KS_ROOT}/config-files/authorized_keys" "${INITRDMOUNT}/etc/dropbear/"
+	cp "${KS_ROOT}/config-files/authorized_keys" "${INITRDMOUNT}/root/.ssh/"
 	chmod 400 "${INITRDMOUNT}/root/.ssh/authorized_keys" \
 		"${INITRDMOUNT}/etc/dropbear/authorized_keys"
 fi
 #### passwords
 printf "Altering passwords.\n"
-pushd "${INITRDMOUNT}"
+cwd_old=$(pwd)
+cd "${INITRDMOUNT}"
 cp etc/passwd etc/passwd.org
 sed -e 's#bash#sh#g' etc/passwd.org > etc/passwd
 rm -f etc/passwd.org
@@ -741,21 +799,21 @@ cp etc/shadow etc/shadow.org
 sed -r -e "/^root:/c \root:${PASSWDENC}:14466:0:::::" \
 	etc/shadow.org > etc/shadow
 rm -f etc/shadow.org
-popd
+cd "${cwd_old}"
 #### pre-installation scripts
-if [ -d "${CWD}/../pre-install/" ]; then
+if [ -d "${KS_ROOT}/pre-install/" ]; then
 	printf "Copying pre-installation scripts.\n"
 	mkdir -p ${INITRDMOUNT}/etc/pre-install || true
-	for PRESCRIPT in $(ls "${CWD}/../pre-install/"); do
-		cp -r "${CWD}/../pre-install/${PRESCRIPT}" "${INITRDMOUNT}/etc/pre-install/"
+	for PRESCRIPT in $(ls "${KS_ROOT}/pre-install/"); do
+		cp -r "${KS_ROOT}/pre-install/${PRESCRIPT}" "${INITRDMOUNT}/etc/pre-install/"
 	done
 fi
 #### post-installation scripts
-if [ -d "${CWD}/../post-install/" ]; then
+if [ -d "${KS_ROOT}/post-install/" ]; then
 	printf "Copying post-installation scripts.\n"
 	mkdir -p ${INITRDMOUNT}/etc/post-install || true
-	for POSTSCRIPT in $(ls "${CWD}/../post-install/"); do
-		cp -r "${CWD}/../post-install/${POSTSCRIPT}" \
+	for POSTSCRIPT in $(ls "${KS_ROOT}/post-install/"); do
+		cp -r "${KS_ROOT}/post-install/${POSTSCRIPT}" \
 			"${INITRDMOUNT}/etc/post-install/"
 	done
 fi
@@ -767,8 +825,8 @@ df -h "${INITRDMOUNT}"
 umount "${INITRDMOUNT}"
 gzip -9 "${TMPDIR}/ramdisk.img"
 RDISKNAME=$(basename "${KSCONFIG}" .cfg)
-if [ ! -d "${CWD}/../rootdisks/" ]; then
-	mkdir "${CWD}/../rootdisks/"
+if [ ! -d "${KS_ROOT}/rootdisks/" ]; then
+	mkdir "${KS_ROOT}/rootdisks/"
 fi
-mv "${TMPDIR}/ramdisk.img.gz" "${CWD}/../rootdisks/${RDISKNAME}.gz"
+mv "${TMPDIR}/ramdisk.img.gz" "${KS_ROOT}/rootdisks/${RDISKNAME}.gz"
 # EOF
