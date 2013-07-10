@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # Desc: Creates an image configured by parameters - config, kernel, template
 #
 # Copyright (C) 2006 Davide Zito
@@ -23,22 +23,32 @@
 set -e
 set -u
 
+CWD=$(pwd)
+SCRIPT_NAME=$(basename -- "${0}")
 # Ramdisk Constants
 RDSIZE=${RDSIZE:-65536}
+SLACK_KS_DIR=${SLACK_KS_DIR:-''}
+if [ -z "${SLACK_KS_DIR}" ]; then
+	# Presumption is $0 is in $SLACK_KS_DIR/scripts/
+	SLACK_KS_DIR=$(dirname -- "${0}")
+	cd "${SLACK_KS_DIR}"
+	cd ../
+	SLACK_KS_DIR="$(pwd)"
+	cd "${CWD}"
+fi
 
 show_help()
 {
-	printf "\nUsage: %s <config-file> <bzImage> <template>\n\n" "${0}"
-#	echo "Example: ${0} \
-#		config-files/sample.cfg \
-#		kernels/huge.s/bzImage \
-#		templates/tmpl-slackware-10.2.gz"
+	printf "Usage: %s <config-file> <bzImage> <template>\n" "${SCRIPT_NAME}" 1>&2
+	printf "Example: %s %s %s\n" "${SCRIPT_NAME}" "config-files/sample.cfg" \
+		"kernels/huge.s/bzImage" "templates/tmpl-slackware-10.2.gz" 1>&2
 	return 0
 } # show_help
 #########
 # MAIN	#
 #########
 if [ $# -ne 3 ]; then
+	printf "Error: not enough parameters given.\n\n" 1>&2
 	show_help
 	exit 1
 fi
@@ -47,97 +57,99 @@ CFGFILE=${1:-''}
 KERNEL=${2:-''}
 TMPLFILE=${3:-''}
 if [ -z "${CFGFILE}" ] || [ -z "${TMPLFILE}" ] || [ -z "${KERNEL}" ]; then
+	printf "Error: One of given parameters is empty.\n\n" 1>&2
 	show_help
 	exit 1
 fi
 if [ ! -f "${CFGFILE}" ]; then
-	printf "\nCannot find config file: '%s'!\n\n" "${CFGFILE}"
+	printf "Error: Cannot find config file: '%s'!\n\n" "${CFGFILE}" 1>&2
 	exit 1
 fi
 if [ ! -f "${TMPLFILE}" ]; then
-	printf "\nCannot find template image '%s'!\n" "${TMPLFILE}"
+	printf "Error: Cannot find template image '%s'!\n\n" "${TMPLFILE}" 1>&2
 	show_help
 	exit 1
 fi
 if [ ! -f "${KERNEL}" ]; then
-	printf "\nCannot find bzImage '%s'!\n" "${KERNEL}"
+	printf "Error: Cannot find bzImage '%s'!\n\n" "${KERNEL}" 1>&2
 	show_help
 	exit 1
 fi
 # Tool check
 if [ $(whoami) != "root" ]; then
-	printf "\nYou must exec %s as root\n\n" "${0}"
+	printf "Error: This script must be executed as a root.\n\n" 1>&2
 	exit 1
 fi
-if ! which openssl &>/dev/null ; then
-	printf "\nCannot find openssl binary!\n"
-	printf "\nPlease install openssl package.\n\n"
+if ! which openssl > /dev/null 2>&1 ; then
+	printf "Error: Cannot find openssl binary!\n" 1>&2
+	printf "Error: Please install openssl package.\n\n" 1>&2
 	exit 1
 fi
 # Directories check
-if [ ! -d './rootdisks' ]; then
-	mkdir './rootdisks'
-fi
-if [ ! -d './mount' ]; then
-	mkdir './mount'
+if [ ! -d "${SLACK_KS_DIR}/rootdisks" ]; then
+	mkdir "${SLACK_KS_DIR}/rootdisks"
 fi
 
 clear
-
+. "${CFGFILE}"
 HOST=$(basename "${CFGFILE}" '.cfg')
-if [ ! -f "./config-files/${HOST}.cfg" ]; then
-	printf "Cannot find config file: './config-files/%s.cfg'.\n\n" "${HOST}"
+MYTMP_DIR=$(mktemp -d)
+if [ -z "${MYTMP_DIR}" ]; then
+	printf "Error: Failed to create temporary directory.\n\n" 1>&2
 	exit 1
 fi
-. "./config-files/${HOST}.cfg"
-#
+printf "Using temp directory '%s'.\n" "${MYTMP_DIR}"
 # Info needed for: 
-#
 # - Kernel name in rootdisks/$HOST.install
 # - root password md5 hash
 # - Install info
-#
 KNAME=$(basename "${KERNEL}")
 ENCRYPTED=$(openssl passwd -1 "${PASSWD}")
-INSTALL_TYPE=$(printf "%s\n" ${PACKAGE_SERVER} | awk -F':' '{ print $1 }')
+INSTALL_TYPE=$(printf -- "%s" ${PACKAGE_SERVER} | awk -F':' '{ print $1 }')
 #########################
 # Copy from template	#
 # and mount in loopback	#
 #########################
-echo "#########################"
-echo "# Creating initrd image #"
-echo "#########################"
-echo
-printf "Cloning template image..."
+printf "#########################\n"
+printf "# Creating initrd image #\n"
+printf "#########################\n\n"
 
-cp "${TMPLFILE}" "${HOST}.gz" \
+printf "Cloning template image..."
+cp "${TMPLFILE}" "${MYTMP_DIR}/${HOST}.gz" \
  && printf "\t[ OK ]\n"
 
 # Unpacking root image
 printf "Unpacking initrd image..."
-
+cd "${MYTMP_DIR}"
 gunzip "${HOST}.gz" \
  && printf "\t[ OK ]\n"
+cd "${CWD}"
 
 sleep 2
 # Mounting root image in loopback on mount directory
+MOUNT_POINT="${MYTMP_DIR}/mount"
+mkdir "${MOUNT_POINT}"
 printf "Mounting initrd image..."
-if mount -o loop "${HOST}" ./mount > /dev/null 2>&1 ; then
+if mount -o loop "${MYTMP_DIR}/${HOST}" \
+	"${MOUNT_POINT}" > /dev/null 2>&1 ; then
 	printf "\t[ OK ]\n"
 else
-	rm "${HOST}"
+	rm -rf "${MYTMP_DIR}"
 	printf "\t[FAILED]\n"
-	printf "\nError mounting initrd image - Aborting!\n\n"
+	printf "\nError mounting initrd image - Aborting!\n\n" 1>&2
 	exit 1
 fi
 #################
 # Kickstart.cfg #
 #################
+if [ ! -d "${MOUNT_POINT}/etc" ]; then
+	mkdir "${MOUNT_POINT}/etc"
+fi
 #------------------------------------------
 # Creates etc/Kickstart.cfg on root image
 #------------------------------------------
-sed -e "s@${PASSWD}@\'${ENCRYPTED}\'@" "config-files/${HOST}.cfg" \
-	> mount/etc/Kickstart.cfg
+sed -e "s@${PASSWD}@\'${ENCRYPTED}\'@" "${CFGFILE}" \
+	> "${MOUNT_POINT}/etc/Kickstart.cfg"
 #----------------------------------------------------------
 # appends Taglist to Kickstart.cfg 
 #
@@ -150,60 +162,67 @@ TAGGETTYPE=$(printf "%s" "${TAG}" | cut -d ':' -f 1)
 TAGFILE=$(basename "${TAG}")
 if [ "$(printf "%s" "${TAG}" | cut -d ':' -f 1)" = 'file' ]; then
 	printf "Copying TAG list '%s' ..." "${TAGFILE}"
-	if [ -z "${TAGFILE}" ] || [ ! -e "./taglists/${TAGFILE}" ]; then
-		printf "\t\t[ FAIL ]\n"
-		printf "TAG list empty or does not exist.\n"
+	if [ -z "${TAGFILE}" ] || [ ! -e "${SLACK_KS_DIR}/taglists/${TAGFILE}" ]; then
+		printf "\t[ FAIL ]\n"
+		printf "TAG list is either empty or does not exist.\n" 1>&2
 	else
-		printf "#\n# Taglist: %s\n#" "${TAGFILE}" >> mount/etc/Kickstart.cfg
-		grep -v -E -e "^#" "./taglists/${TAGFILE}" | \
-			awk '{ printf "#@%s\n", $0 }' >> mount/etc/Kickstart.cfg
-		printf "# END of Taglist: %s" "${TAGFILE}" >> mount/etc/Kickstart.cfg
-		printf "\t\t[ OK ]\n"
+		printf "#\n# Taglist: %s\n#" "${TAGFILE}" >> \
+			"${MOUNT_POINT}/etc/Kickstart.cfg"
+		grep -v -E -e "^#" "${SLACK_KS_DIR}/taglists/${TAGFILE}" | \
+			awk '{ printf "#@%s\n", $0 }' >> "${MOUNT_POINT}/etc/Kickstart.cfg"
+		printf "# END of Taglist: %s" "${TAGFILE}" >> \
+			"${MOUNT_POINT}/etc/Kickstart.cfg"
+		printf "\t[ OK ]\n"
 	fi # if [ -z "${TAGFILE}" ] || ...
 else
 	printf "TAG list skipped.\n"
 fi # if [ "$(printf ... ]
 # SSH keys
 printf "Getting SSH keys..."
-if [ -e "config-files/authorized_keys" ]; then
-	mkdir -p "mount/root/.ssh/"
-	mkdir -p "mount/etc/dropbear/"
-	cp "config-files/authorized_keys" "mount/etc/dropbear/"
-	cp "config-files/authorized_keys" "mount/root/.ssh/"
-	chmod 400 "mount/root/.ssh/" "mount/etc/dropbear/"
-	printf "\t\t[ OK ]\n"
+if [ -e "${SLACK_KS_DIR}/config-files/authorized_keys" ]; then
+	mkdir -p "${MOUNT_POINT}/root/.ssh/"
+	mkdir -p "${MOUNT_POINT}/etc/dropbear/"
+	cp "${SLACK_KS_DIR}/config-files/authorized_keys" \
+		"${MOUNT_POINT}/etc/dropbear/"
+	cp "${SLACK_KS_DIR}/config-files/authorized_keys" \
+		"${MOUNT_POINT}/root/.ssh/"
+	chmod 400 "${MOUNT_POINT}/root/.ssh/" "${MOUNT_POINT}/etc/dropbear/"
+	printf "\t[ OK ]\n"
 else
-	printf "\t\t[ FAIL ]\n"
+	printf "\t[ FAIL ]\n"
 fi
 #--------------------------------------
 # Timezone setting
 #--------------------------------------
-cp "/usr/share/zoneinfo/${TIMEZONE}" mount/etc/localtime
+cp "/usr/share/zoneinfo/${TIMEZONE}" "${MOUNT_POINT}/etc/localtime"
 ##########
 # Kernel #
 ##########
-if [ ! -d mount/kernel ]; then
-	mkdir mount/kernel
+if [ ! -d "${MOUNT_POINT}/kernel" ]; then
+	mkdir "${MOUNT_POINT}/kernel"
 fi
-cp "${KERNEL}" mount/kernel/
+cp "${KERNEL}" "${MOUNT_POINT}/kernel/"
 #------------------------------------------
 # Creates the root image
 #------------------------------------------
 printf "Umounting initrd image..."
-
-umount mount \
+umount "${MOUNT_POINT}" \
   && printf "\t[ OK ]\n"
 
 printf "Compressing initrd image..."
+cd "${MYTMP_DIR}"
 gzip "${HOST}" \
 	&& printf "\t[ OK ]\n"
 #
 # Now we move the root image to
 # rootdisks directory
 #
-mv "${HOST}.gz" rootdisks
+mv "${HOST}.gz" "${SLACK_KS_DIR}/rootdisks/"
+printf "Removing temp directory '%s'.\n" "${MYTMP_DIR}"
+rm -rf "${MYTMP_DIR}"
 
-printf "\nRoot image for '%s' has been created!\n\n" ${HOST}
+printf "\nRoot image for '%s' has been created and moved to '%s'!\n\n" \
+	"${HOST}" "${SLACK_KS_DIR}/rootdisks/"
 
 if [ "${INSTALL_TYPE}" = "cdrom"  ]; then
 
@@ -218,8 +237,8 @@ if [ "${INSTALL_TYPE}" = "cdrom"  ]; then
 EOP
 
 	else
-		printf "\nSee 'rootdisks/Install.%s.txt' for install info.\n\n" ${HOST}
-		cat << EOF > ./rootdisks/Install.${HOST}.txt
+		printf "\nSee 'rootdisks/%s.Install.txt' for install info.\n\n" ${HOST}
+		cat << EOF > ./rootdisks/${HOST}.Install.txt
 
 ------------- LILO INSTALL  -----------------------
 #
@@ -271,11 +290,11 @@ EOF
 # info file
 #
 	GROUP=$(id -ng)
-	chown ${USER}:${GROUP} "./rootdisks/Install.${HOST}.txt"
+	chown ${USER}:${GROUP} "${SLACK_KS_DIR}/rootdisks/${HOST}.Install.txt"
 fi # if INSTALL_TYPE cdrom
 #
 # Changes ownership to
 # initrd image
 #
-chown ${USER}:${GROUP} "./rootdisks/${HOST}.gz"
+chown ${USER}:${GROUP} "${SLACK_KS_DIR}/rootdisks/${HOST}.gz"
 # EOF
