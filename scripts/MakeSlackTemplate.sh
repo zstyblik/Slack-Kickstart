@@ -26,7 +26,7 @@ KS_ROOT="${KS_ROOT:?Variable KS_ROOT not set.}"
 SCRIPT_NAME=$(basename -- "${0}")
 # Note: http://www.busybox.net/downloads/binaries/latest/
 # or provide busybox Slackware package, eg. built from SBo
-BUSYBOXFILE=${BUSYBOXFILE:-'/tmp/busybox-x86_64 '}
+BUSYBOXFILE=${BUSYBOXFILE:-'/tmp/busybox-x86_64'}
 DROPBEARVER=${DROPBEARVER:-''}
 LIBDIRSUFFIX=${LIBDIRSUFFIX:-''}
 INITRDMOUNT=${INITRDMOUNT:-'/mnt/initrd'}
