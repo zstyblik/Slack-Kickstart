@@ -22,7 +22,7 @@
 set -e
 set -u
 
-KS_ROOT="${KS_ROOT:?Variable KS_ROOT not set.}"
+KS_ROOT=${KS_ROOT:-''}
 SCRIPT_NAME=$(basename -- "${0}")
 # Note: http://www.busybox.net/downloads/binaries/latest/
 # or provide busybox Slackware package, eg. built from SBo
@@ -37,11 +37,6 @@ ERROR_LOG=${ERROR_LOG:-"${TMPDIR}/${SCRIPT_NAME}.err.log"}
 # Ramdisk Constants
 RDSIZE=${RDSIZE:-65536}
 BLKSIZE=1024
-
-rm -f "${ERROR_LOG}"
-mv "${ERROR_LOG}" "${ERROR_LOG}.old" 2>/dev/null || true
-touch "${ERROR_LOG}"
-printf "Error log '%s'.\n" "${ERROR_LOG}"
 
 # DESC: removes /usr/man, /usr/doc and /usr/share
 clean_usr()
@@ -181,6 +176,12 @@ if ! which openssl >/dev/null 2>&1; then
 	exit 1
 fi
 
+if [ -z "${KS_ROOT}" ]; then
+	printf "KS_ROOT variable is not set or empty.\n" 1>&2
+	show_help
+	exit 1
+fi
+
 KSCONFIG=${1:-''}
 if [ -z "${KSCONFIG}" ]; then
 	show_help
@@ -212,6 +213,12 @@ if [ ! -e "${BUSYBOXFILE}" ]; then
 	printf "ERROR: Busybox is mandatory. Unable to continue.\n" 1>&2
 	exit 1
 fi # if [ ! -e "${BZIMG}" ]
+
+rm -f "${ERROR_LOG}"
+mv "${ERROR_LOG}" "${ERROR_LOG}.old" 2>/dev/null || true
+touch "${ERROR_LOG}"
+printf "Error log '%s'.\n" "${ERROR_LOG}"
+
 # If $DROPBEARVER is not set, try figure out the latest from the Web
 if [ -z "${DROPBEARVER}" ]; then
 	DROPBEARVER=$(wget http://matt.ucc.asn.au/dropbear/ -O - 2>/dev/null | \
