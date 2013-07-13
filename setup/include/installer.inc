@@ -44,11 +44,11 @@ Create_Install_List() {
 			"${TMP}/taglist" | tee -a "${FH_LOG}" 1>&2
 		exit 1
 	fi
-	# Creates /mnt/PkgList.txt from /mnt/CHECKSUMS.md5
+	# Creates "${TMP}/PkgList.txt" from /mnt/CHECKSUMS.md5
 	cat /mnt/CHECKSUMS.md5 | grep -e "./slackware${LIBDIRSUFFIX}/" | \
 		grep -E -e "\.t(g|x)z$" | \
 		awk -F' ' '{ print $2 }' | \
-		awk -F'/' '{ printf "%s/%s\n", $3, $4 }' > /mnt/PkgList.txt
+		awk -F'/' '{ printf "%s/%s\n", $3, $4 }' > "${TMP}/PkgList.txt"
 	#
 	cat /dev/null > /mnt/usr/Download/install.list
 	#
@@ -66,7 +66,7 @@ Create_Install_List() {
 			awk -F'/' '{ print $2 }')
 		directory=$(printf -- "%s" "${PACKAGE}" |\
 			awk -F'/' '{ print $1 }')
-		filename=$(cat /mnt/PkgList.txt | \
+		filename=$(cat "${TMP}/PkgList.txt" | \
 			grep -E -e "^${directory}/${pkg}-.*\.t(g|x)z$" | \
 			head -n 1)
 
