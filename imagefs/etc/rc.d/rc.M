@@ -323,9 +323,6 @@ if [ -x /etc/rc.d/rc.sysvinit ]; then
   /etc/rc.d/rc.sysvinit
 fi
 
-# TODO ~ remove me
-/usr/sbin/telnetd -l /bin/ash
-
 # Start the local setup procedure.
 if [ -x /etc/rc.d/rc.local ]; then
   /etc/rc.d/rc.local
