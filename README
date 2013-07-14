@@ -1,7 +1,3 @@
-BUGs:
-2] kernel panics after the first boot - wtf
-yet if you run lilo again after booting up into VM, it works then and ever after
-
 Slack-Kickstart
 ---------------
 
@@ -16,26 +12,26 @@ INFO:
 Slack-Kickstart provides automatic installation of Slackware and Slackware64 
 Linux distribution. This is a FORKED version of ORIGINAL Slack-Kickstart which
 brings some changes. 
-First of all, it brings support for Slackware64-13.37 as well as script for
-building ramdisks, thus long-term support for future releases. And you can,
-finally, make these by yourself. I have made some modifications to scripts as
+First of all, it brings support for instalation of Slackware64 as well as script
+for building ramdisks, thus long-term support for future releases. And you can
+make ramdisk by yourself. I have made some modifications to scripts as
 well - mostly clean ups. And for the last, but not least, some of configuration
-parameters got changed - some got added, some got obsolete.
+parameters got changed - some got added, some became obsolete.
 
 Main goal is to have an effective way of unattended installation of Slackware on
-machine with virtual machines in mind especially. For a real hardware,
-Slack-kickstart might not be as flexible as Anaconda is.
+machine with virtual machines in mind especially. Slack-Kickstart might not be
+as flexible as Anaconda is.
 
 
 REQUIREMENTS:
 -------------
 
-- A kernel with loopback device support (Slackware standard kernel is OK).
-- Tcl & Tk (Needed to run the configuration GUI TkGui.tcl).
-- syslinux (Needed to create Iso & PXE images).
-- cdrtools (as above).
-- openssl (Needed to encrypt the root's password).
-- busybox (Needed to create templates).
+- A kernel with loopback device support(Slackware standard kernel is OK)
+- syslinux(needed to create Iso & PXE images)
+- cdrtools(as above)
+- openssl(needed to encrypt the root's password)
+- busybox(needed to create templates)
+- dropbear(needed for SSH access to ramdisk)
 
 
 LICENSE:
@@ -90,10 +86,6 @@ kernels-\
 	[dir] packaged-kernel
 	|	\
 	|	kernel-x.y.txz modules-x.y.txz
-
-See the online tutorial at:
-
-  http://www.slack-kickstart.org/index.php?ART=documentation
 
 
 CONFIG FILE:
